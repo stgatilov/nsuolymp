@@ -169,7 +169,7 @@ def colored_verdict(verdict, vstr = None):
 		return colorama.Style.BRIGHT + colorama.Fore.CYAN + vstr + colorama.Style.RESET_ALL
 	if verdict in ['.', 'Skipped']:
 		return colorama.Style.BRIGHT + colorama.Fore.WHITE + vstr + colorama.Style.RESET_ALL
- 	return vstr
+	return vstr
 
 # returns colored version of a string with verdicts
 def colored_verdicts(verdicts):
@@ -526,7 +526,7 @@ def check_solution_on_test(cfg, solution, input_file, gen_output = False):
 			copyfile(get_output_by_input(input_file), 'answer.txt')
 		elif res.verdict == 'A':
 			res = res._replace(verdict = 'O')
- 	if (res.verdict == 'A'):
+	if (res.verdict == 'A'):
 		ok = run_checker(cfg.quiet)
 		if not ok:
 			res = res._replace(verdict = 'W')
@@ -647,7 +647,7 @@ def print_validate_results(results):
 	else:
 		print(colored_verdict('W', "Failed tests:"))
 		for f in results:
-			print("   " + f)
+			print("	  " + f)
 
 # checks if all the tests are in form tests\[1.in, 2.in, 3.in, ..., {k}.in]
 # returns list of error messages (empty list if everything is OK)

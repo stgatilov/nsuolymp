@@ -56,9 +56,9 @@ try:
 		if args.compile:
 			compile_list.extend(get_sources_in_problem(solutions = True))
 	else:
-	 	for sol in args.solutions:
-	 		sol_noext = path.splitext(sol)[0]
-	 		# compile specified solution
+		for sol in args.solutions:
+			sol_noext = path.splitext(sol)[0]
+			# compile specified solution
 			if args.compile:
 				if is_source(sol):
 					compile_list.append(sol)
@@ -66,9 +66,9 @@ try:
 					related_files = [sol] + glob.glob(sol_noext + '.*')
 					related_sources = filter(is_source, related_files)
 					compile_list.extend(related_sources)
-	 		else:
-	 			if is_source(sol) and not has_java_task(sol):
-		 			compile_list.append(sol)
+			else:
+				if is_source(sol) and not has_java_task(sol):
+					compile_list.append(sol)
 
 	# compile all the necessary sources
 	compile_results = compile_sources(compile_list, cfg)
@@ -81,8 +81,8 @@ try:
 	if test_all_solutions:
 		solutions_list = get_solutions()
 	else:
-	 	for sol in args.solutions:
-	 		sol_noext = path.splitext(sol)[0]
+		for sol in args.solutions:
+			sol_noext = path.splitext(sol)[0]
 			if is_solution(sol_noext):
 				solutions_list.append(sol_noext)
 			else:	

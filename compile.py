@@ -23,7 +23,7 @@ def main(argv = None):
 	cfg = Config(quiet = args.quiet, stop = args.stop_on_error)
 
 	compile_list = []
-	if '*' in args.sources:
+	if '*' in args.sources or '@' in args.sources:
 		all_sources = filter(is_source, glob.glob('*'))
 		compile_list.extend(list(all_sources))
 	else:	

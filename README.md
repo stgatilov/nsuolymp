@@ -147,6 +147,9 @@ you might want to set `validator_eoln_relaxed = True` in `nsuolymp_cfg.py` to av
 
 You can customize compilation (compiler parameters and order of preference) in `nsuolymp_cfg.py`.
 
+For stress-testing, you have to pass full generator command line in double quotes after `-s`.
+So you might need to prepend `./` (dot slash) to generator executable name on Linux or MacOS.
+
 On MacOS, you should run testsol as root (via `sudo`), otherwise it won't be able to enforce time and memory limits.
 
 

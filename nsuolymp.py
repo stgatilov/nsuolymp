@@ -27,6 +27,13 @@ class save_cwd():
 	def __exit__(self, type, value, traceback):
 		os.chdir(self.cwd)
 
+# returns contents of file by given path (or None if it is not present)
+def read_file_contents(filepath):
+	if not filepath or not path.isfile(filepath):
+		return None
+	with open(filepath, 'r') as f:
+		return f.read()
+
 # returns a function that can run given CMD line
 # it supresses output to stdout/stderr if quiet is set
 def cmd_runner(quiet = False):

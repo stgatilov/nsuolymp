@@ -210,12 +210,14 @@ def extract_samples(text):
 def extract_limits(text):
 	if text is None:
 		return None
-	text = re.sub('%.*\n', '', text) # note: false positives with percent as \%
-	problem_re = r'\\begin\s*\{problem\}' + r'\s*\{.*\}' * 3 + r'\s*\{(.*)\}' * 2
+	text = re.sub('%(.*?)\n', '', text) # note: false positives with percent as \%
+
+	problem_re  = r'(?x) \\begin \s* \{ problem \}'
+	problem_re += r'\s* \{ (.*?) \}' * 5
 	match = re.search(problem_re, text)
 	if match:
-		tl_txt = match.group(1)
-		ml_txt = match.group(2)
+		tl_txt = match.group(4)
+		ml_txt = match.group(5)
 		try:
 			tl = float(tl_txt.split()[0])
 			ml = float(ml_txt.split()[0])

@@ -27,7 +27,7 @@ if args.gen_output:
 cfg = Config(quiet = args.quiet, stop = args.stop_on_error)
 # resolve limits
 if args.tl is None or args.ml is None:
-	problem_limits = extract_limits(read_problem_statement())
+	problem_limits = read_limits(find_problem_statement())
 	if problem_limits is not None:
 		if args.tl is None:
 			args.tl = problem_limits[0]

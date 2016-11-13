@@ -185,20 +185,41 @@ def colored_verdicts(verdicts):
 ############################## Problem statements ##############################
 
 # finds all sample texts in a given problem statement (in LaTeX with olymp.sty)
-# returns list of pairs, which are the extracted samples in order of appearance
+# returns list of pairs (input, output), which are the extracted samples in order of appearance
+# returns None on fail
+# Note: in case of \exmpfile command, paths are searched relative to CWD
 def extract_samples(text):
 	if text is None:
 		return None
-	text = re.sub('%.*\n', '', text) # note: false positives with percent as \%
+	text = re.sub('%(.*?)\n', '', text) # note: false positives with percent as \%
+
+	exmp_re = r'''
+		\\exmp \{                  # the command
+			(?P<input>  .*?)       # input in braces
+		\} \{
+			(?P<output> .*?)       # output in braces
+		\}
+	'''
+	exmpfile_re = r'''
+		\\exmpfile \{              # the command
+			(?P<input_file>  .*?)  # input filename in braces
+		\} \{
+			(?P<output_file> .*?)  # output filename in braces
+		\}
+	'''
+	final_re = '(?sx) (%s)|(%s)' % (exmp_re, exmpfile_re)
+
 	all_samples = []
-	for m in re.finditer(r'\\exmp{', text):
-		pos = m.end()
-		npos = string.find(text, '}', pos)
-		test_input = text[pos:npos]
-		pos = npos
-		pos = string.find(text, '{', pos) + 1
-		npos = string.find(text, '}', pos)
-		test_output = text[pos:npos]
+	for match in re.finditer(final_re, text):
+		args = match.groupdict()
+		if args['input_file'] is not None:
+			test_input = read_file_contents(args['input_file'])
+			test_output = read_file_contents(args['output_file'])
+		else:
+			test_input = args['input']
+			test_output = args['output']
+		if test_input is None or test_output is None:
+			return None
 		test_input = string.strip(test_input) + '\n'
 		test_output = string.strip(test_output) + '\n'
 		all_samples.append((test_input, test_output))
@@ -226,11 +247,11 @@ def extract_limits(text):
 		return (tl, ml)
 	return None
 
-# returns full LaTeX problem statement text
+# returns relative path to the file with LaTeX problem statement (or None if not found)
 # statements_name is the name of the directory with statements
 # if problem_name is not specified, it is determined as the last directory in CWD
 # Note: CWD must be equal to the problem's directory
-def read_problem_statement(statements_name = None, problem_name = None):
+def find_problem_statement(statements_name = None, problem_name = None):
 	if statements_name is None:
 		statements_name = '_statements'
 	if problem_name is None:
@@ -238,10 +259,27 @@ def read_problem_statement(statements_name = None, problem_name = None):
 	stat_file = path.join(os.pardir, statements_name, 'problems', problem_name + '.tex')
 	if not path.isfile(stat_file):
 		return None
-	text = None
-	with open(stat_file, "rt") as f:
-		text = f.read()
-	return text
+	return stat_file
+
+# returns all sample tests for a given problem
+# statement_path is a relative path to existing LaTeX problem statement file
+#    (can be obtained from find_problem_statement)
+# see extract_samples for description of return value
+def read_samples(statement_path):
+	if statement_path is None:
+		return None
+	statement_text = read_file_contents(statement_path)
+	with save_cwd():
+		os.chdir(path.dirname(statement_path))
+		os.chdir(os.pardir)
+		return extract_samples(statement_text)
+
+# returns time and memory limits for a given problem
+# statement_path is a relative path to existing LaTeX problem statement file
+#    (can be obtained from find_problem_statement)
+# see extract_limits for description of return value
+def read_limits(statement_path):
+	return extract_limits(read_file_contents(statement_path))
 
 ############################## Compiling sources ###############################
 
@@ -717,7 +755,7 @@ def check_samples(statements_name = None, quiet = False):
 		printq(quiet, "Sample test %s is ok" % path_in)
 		return False
 
-	samples = extract_samples(read_problem_statement(statements_name))
+	samples = read_samples(find_problem_statement(statements_name))
 	if samples is None:
 		return "not found"
 	bad_tests = []

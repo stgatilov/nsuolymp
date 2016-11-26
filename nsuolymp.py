@@ -73,6 +73,10 @@ def get_tests_inputs():
 def if_exe_exists(f):
 	return path.isfile(f) or path.isfile(f + '.exe')
 
+# returns whether the given file is a java class file
+def is_java_class(f):
+	return path.isfile(f + '.class')
+	
 # returns whether the given file is a directory with Task.class file
 def has_java_task(f):
 	return path.isdir(f) and path.isfile(path.join(f, 'Task.class'))
@@ -80,9 +84,11 @@ def has_java_task(f):
 # returns whether a given file/directory is a problem solution
 # f must be specified without extension
 # in case of c++/pas, it must be executable
-# in case of java, it must be a directory with Task.class in it
+# in case of java, it is one of:
+#   class file with .class extension    (proper way)
+#   a directory with Task.class in it   (for old nsuts)
 def is_solution(f):
-	return if_exe_exists(f) or has_java_task(f)
+	return if_exe_exists(f) or is_java_class(f) or has_java_task(f)
 
 # returns list of solutions for current problem
 # CWD must be set to problem's directory
@@ -285,9 +291,9 @@ def read_limits(statement_path):
 
 # returns whether a given file/directory is a source file (for solution of anything else)
 # in case of c++/pas, it must have commonly used extension
-# in case of java, it must be a directory with Task.java in it
+# in case of java, it must be either a java source file or a directory with Task.java in it
 def is_source(f):
-	return path.splitext(f)[1] in ['.cpp', '.c', '.c++', '.cxx', '.pas', '.dpr'] or path.isfile(path.join(f, 'Task.java'))
+	return path.splitext(f)[1] in ['.cpp', '.c', '.c++', '.cxx', '.pas', '.dpr', '.java'] or path.isfile(path.join(f, 'Task.java'))
 
 # returns list of generator source files for current problem
 # CWD must be set to problem's directory
@@ -323,6 +329,7 @@ def if_command_exists(f):
 	return (get_command_path(f) is not None)
 
 # returns language string for specified source file
+# in some cases mode is appended to the string (e.g. for a directory with Task.java)
 # if language is unknown, then None is returned
 def guess_source_language(source):
 	(name, ext) = path.splitext(source)
@@ -330,8 +337,10 @@ def guess_source_language(source):
 		return 'cpp'		# gcc/msvc is determined later
 	elif ext in ['.pas', '.dpr']:
 		return 'pas'		# fpc/dcc32 can be used...
+	elif ext in ['.java']:
+		return 'java'		# javac can be used directly
 	elif ext == '' and path.isfile(path.join(source, 'Task.java')):
-		return 'java'		# directory with Task.java
+		return 'java dir'	# directory with Task.java
 	return None
 
 # returns command-line string which should be used to compile given source
@@ -366,11 +375,11 @@ def compile_source_impl(source, language = None, compiler_flags = None, compiler
 		printq(quiet, "Cmd: %s" % colored_verdict('R', cmd))
 		return cmd_runner(quiet)(cmd)
 	err = None
-	order = compiler_order.get(language)
+	order = compiler_order.get(language.split()[0])
 	with save_cwd():
 		os.chdir(path.dirname(path.abspath(source)))
 		source_local = path.basename(source)
-		if language == 'java':
+		if language == 'java dir':
 			printq(quiet, "Compiling java-task solution %s" % colored_verdict('R', source_local))
 			os.chdir(source_local)
 			source_local = 'Task.java'
@@ -453,15 +462,19 @@ def controlled_run(popen_args, time_limit = None, memory_limit = None, quiet = F
 		verdict = ('A' if exit_code == 0 else 'R')
 	return RunResult(verdict, exit_code, max_cpu_time, max_memory)
 
-# runs a solution by name (either an executable file or a directory with java Task)
+# runs a solution by name (either an executable file or java class)
 # parameters and results as in controlled_run
 def controlled_run_solution(solution, time_limit = None, memory_limit = None, quiet = False):
 	if if_exe_exists(solution):
 		solution_path = solution if os.name == 'nt' else path.join('./', solution)
 		return controlled_run(solution_path, time_limit, memory_limit, quiet)
-	assert(has_java_task(solution))
+	assert(is_java_class(solution) or has_java_task(solution))
 	heap_size_key = '-Xmx1G' if memory_limit is None else '-Xmx%dM' % int(memory_limit)
-	popen_args = ['java', '-cp', solution, heap_size_key, '-Xms64M', '-Xss32M', 'Task']
+	popen_args = ['java', heap_size_key, '-Xms64M', '-Xss32M']
+	if is_java_class(solution):
+		popen_args += [path.splitext(solution)[0]]
+	elif has_java_task(solution):
+		popen_args += ['-cp', solution, 'Task']
 	return controlled_run(popen_args, time_limit, None, quiet)
 
 ############################## Diffs and checkers ##############################

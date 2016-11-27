@@ -150,6 +150,10 @@ def get_verdict_full_name(verdict):
 		vstr = "Accepted"
 	if verdict == 'W':
 		vstr = "Wrong answer"
+	if verdict == 'P':
+		vstr = "Presentation error"
+	if verdict == 'J':
+		vstr = "Jury error"
 	if verdict == 'R':
 		vstr = "Runtime error"
 	if verdict == 'T':
@@ -170,7 +174,7 @@ def colored_verdict(verdict, vstr = None):
 		vstr = verdict
 	if verdict[0] == 'A':
 		return colorama.Style.BRIGHT + colorama.Fore.GREEN + vstr + colorama.Style.RESET_ALL
-	if verdict[0] == 'W':
+	if verdict[0] in ['W', 'P', 'J']:
 		return colorama.Style.BRIGHT + colorama.Fore.RED + vstr + colorama.Style.RESET_ALL
 	if verdict[0] == 'R':
 		return colorama.Style.BRIGHT + colorama.Fore.YELLOW + vstr + colorama.Style.RESET_ALL
@@ -493,19 +497,27 @@ def is_file_diff_empty(ap, bp):
 	except IOError:
 		return False
 
-# runs checker and returns whether it has accepted the solution
+# runs checker and returns its opinion on the output file
+# returns 'A' if output is correct, and 'W'/'P'/'J' otherwise
 # Note: CWD must be equal to the problem directory
 # Data taken from files:
 #   'input.txt' - input data
 #   'answer.txt' - jury's output data
 #   'output.txt' - contestant's output data
 def run_checker(quiet = False):
-	wa = True
 	if if_exe_exists('check'):
-		wa = cmd_runner(quiet)('./check input.txt output.txt answer.txt').returncode != 0
+		errcode = cmd_runner(quiet)('./check input.txt output.txt answer.txt').returncode
 	else:
-		wa = not is_file_diff_empty('output.txt', 'answer.txt')
-	return not wa
+		errcode = 0 if is_file_diff_empty('output.txt', 'answer.txt') else 1
+	if errcode == 0:
+		return 'A'
+	if errcode == 1:
+		return 'W'
+	if errcode == 2:
+		return 'P'
+	if errcode == 3:
+		return 'J'
+	return 'W'		# treat unknown cases as WA
 
 ################################### Archives ###################################
 
@@ -588,11 +600,10 @@ def check_solution_on_test(cfg, solution, input_file, gen_output = False):
 		elif res.verdict == 'A':
 			res = res._replace(verdict = 'O')
 	if (res.verdict == 'A'):
-		ok = run_checker(cfg.quiet)
-		if not ok:
-			res = res._replace(verdict = 'W')
+		checker_res = run_checker(cfg.quiet)
+		res = res._replace(verdict = checker_res)
 	printq(cfg.quiet, "on %s: %s" % (input_file, colored_verdict(res.verdict)))
-	if gen_output and res.verdict in ['A', 'W']:
+	if gen_output and res.verdict in ['A', 'W', 'P', 'J']:
 		copyfile('answer.txt', get_output_by_input(input_file))
 	return res
 
@@ -763,7 +774,7 @@ def check_samples(statements_name = None, quiet = False):
 		copyfile(path_out, 'answer.txt')
 		with open('output.txt', 'wt') as f:
 			f.write(sample[1])
-		if not run_checker(quiet):
+		if run_checker(quiet) != 'A':
 			printq(quiet, colored_verdict('W', "Sample test %s has wrong output in statement" % path_in))
 			return True
 		printq(quiet, "Sample test %s is ok" % path_in)

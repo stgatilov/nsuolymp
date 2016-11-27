@@ -51,9 +51,10 @@ Here is an example of proper directory structure:
 		sol_sg_slow.cpp			# solutions start with 'sol_'
 		sol_fat_ok.c			#
 	cubes
-		sol_ss_ok				# Java solutions are subdirectories
+		sol_ss_ok				# Java solutions are subdirectories (for nsuts)
 			Task.java			# starting with 'sol_'
 			Task.class			# and with Task.java|class in it
+		sol_sg_wa.java			# Java solution can be a file too (future of nsuts)
 		validator.cpp
 		testlib.h
 		gen_random.cpp			#
@@ -78,7 +79,8 @@ Here are some rules:
 
 7. Each solution's name must start with `sol_`.
 
-8. Java solution must be a subdirectory with `Task.java` or/and `Task.class` file in it.
+8. For nsuts, java solution must be a subdirectory with `Task.java` or/and `Task.class` file in it.
+   Ordinary java files are also supported as solutions (e.g. `sol_tl.java` or/and `sol_tl.class`).
 
 9. Correct solutions which must pass all tests should have `_ok` in their name.
 

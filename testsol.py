@@ -30,7 +30,7 @@ if args.tl is None or args.ml is None:
 	problem_limits = read_limits(find_problem_statement())
 	if problem_limits is not None:
 		if args.tl is None:
-			args.tl = problem_limits[0]
+			args.tl = convert_default_time_limit(problem_limits[0])
 		if args.ml is None:
 			args.ml = problem_limits[1]
 if args.tl > 0.0:

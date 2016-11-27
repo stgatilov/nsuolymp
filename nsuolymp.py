@@ -479,8 +479,9 @@ def controlled_run_solution(solution, time_limit = None, memory_limit = None, qu
 
 ############################## Diffs and checkers ##############################
 
-# returns whether two files with given names (paths) are diff-equal
-# can be used as fc/diff replacement when checker is not available
+# returns whether two files with given names (paths) are equal as streams of tokens
+# can be used as built-in replacement for wcmp.cpp checker from testlib distribution
+# note that it works a bit different from standard commands fc/diff
 # if any of the files is not present, returns false
 def is_file_diff_empty(ap, bp):
 	try:

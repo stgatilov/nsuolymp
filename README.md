@@ -133,6 +133,10 @@ Run all solutions on three first tests with custom limits:
 
 	testsol @ --tests 1,2,3 --tl 3 --ml 512
 
+Run two solutions on (test 1, tests from 11 to 14, and tests starting with 'bad'):
+
+	testsol sol_sg_ok sol_xx_ok --tests "1,11-14,bad*"
+
 Generate `.out` files for all tests using `sol_sg_ok` solution with big TL:
 
 	testsol sol_sg_ok --gen-output --tl 10

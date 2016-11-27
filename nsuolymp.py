@@ -45,7 +45,7 @@ def cmd_runner(quiet = False):
 # absolute/relative, input/output does not matter
 def get_test_index(f):
 	name = path.splitext(path.basename(f))[0]
-	return int(float(name))
+	return int(name)
 
 # returns relative path to input file of test with given index
 def get_test_input(idx):

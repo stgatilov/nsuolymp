@@ -1,7 +1,7 @@
 from __future__ import division
 from __future__ import print_function 
 from __future__ import absolute_import
-import glob, os, shutil, re, itertools, operator, string, random, subprocess, copy, time, tempfile
+import glob, fnmatch, os, shutil, re, itertools, operator, string, random, subprocess, copy, time, tempfile
 import sarge							# simple wrapper over subprocess
 import psutil							# for measuring CPU time and memory
 import colorama							# for colored console output (cross-platform)
@@ -65,6 +65,35 @@ def get_tests_inputs():
 		except ValueError:
 			return [1, name]
 	return sorted(all_t, key = sort_key)
+
+# returns True when test passes user-specified filter (and False otherwise)
+# filter_str is user-specified string with comma/space-separated tokens
+# each token can be one of the following kinds:
+#   min2  : matches exactly the test with given name 'min2'
+#   3-7   : matches tests with numeric names from 3 to 7 inclusive
+#   bad*  : matches any test whose name suits the glob 'bad*', e.g. 'bad', 'bad4', 'bad_luck'
+# Note that the filter applies to basename of the test (no directories, no extension)
+def if_test_passes_filter(test, filter_str):
+	if filter_str is None:
+		return True
+	name = path.splitext(path.basename(test))[0]
+	tokens = re.split(r'\,|\s', filter_str)
+	for tok in tokens:
+		if tok == name:
+			return True
+		if fnmatch.fnmatch(name, tok):
+			return True
+		match = re.match(r'(?x) ([0-9]+) - ([0-9]+) $', tok)
+		if match is not None:
+			try:
+				rmin = int(match.group(1))
+				rmax = int(match.group(2))
+				idx = get_test_index(test)
+				if idx >= rmin and idx <= rmax:
+					return True
+			except ValueError:
+				pass
+	return False
 
 ########################## Solutions and executables ###########################
 
@@ -609,17 +638,16 @@ def check_solution_on_test(cfg, solution, input_file, gen_output = False):
 
 # run given solution on all tests (or on specified subset)
 # solution: path to solution (executable or directory with java Task)
-# tests: list of tests (rel.path to input file); if None, then all tests are checked
+# tests_filter: string specifying which tests to check (if None, then all tests are run)
 # returns list of RunResult tuples, one per test (see description above)
 # if cfg.stop=True, then shorter string is returned (up to first error inclusive)
 # see check_solution_on_test for explanation of gen_output = True case
-def check_solution(cfg, solution, tests = None, gen_output = False):
+def check_solution(cfg, solution, tests_filter = None, gen_output = False):
 	res_list = []
 	for f in get_tests_inputs():
-		if tests is not None:
-			if path.abspath(f) not in [path.abspath(test) for test in tests]:
-				res_list.append(RunResult('.', 0, 0, 0))
-				continue
+		if not if_test_passes_filter(f, tests_filter):
+			res_list.append(RunResult('.', 0, 0, 0))
+			continue
 		res = check_solution_on_test(cfg, solution, f, gen_output)
 		res_list.append(res)
 		if res.verdict != 'A' and cfg.stop:

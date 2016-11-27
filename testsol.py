@@ -12,7 +12,7 @@ parser.add_argument('-g', '--gen-output', help = "overwrite test output files wi
 parser.add_argument('-s', '--stress', help = "stress test solutions; generator with arguments must be specified just afterwards in double quotes", metavar = "GEN")
 parser.add_argument('-t', '--tl', help = "specify time limit in seconds (by default taken from problem statement, 0 means 'no limit')", type = float)
 parser.add_argument('-m', '--ml', help = "specify memory limit in seconds (by default taken from problem statement, 0 means 'no limit')", type = float)
-parser.add_argument('-i', '--tests', help = "comma-separated list of test names to run on (by default all tests are used)", metavar = "TESTS")
+parser.add_argument('-i', '--tests', help = "comma-separated list of test names/globs/ranges to run on (by default all tests are used)", metavar = "TESTS")
 args = parser.parse_args()
 
 test_all_solutions = ('*' in args.solutions or '@' in args.solutions)
@@ -90,12 +90,6 @@ try:
 				if cfg.stop:
 					raise StopError()
 
-	# find out subset of tests to run on (if any)
-	tests_list = None
-	if args.tests:
-		tests_list = re.split(r'\,|\.|\s', args.tests)
-		tests_list = [get_test_input(t) for t in tests_list]
-
 	# test all solutions
 	if args.stress:
 		generator = args.stress.split()
@@ -104,9 +98,9 @@ try:
 			break
 	elif args.gen_output:
 		solution = solutions_list[0]
-		test_results = [(solution, check_solution(cfg, solution, tests_list, True))]
+		test_results = [(solution, check_solution(cfg, solution, args.tests, True))]
 	else:
-		test_results = check_many_solutions(cfg, solutions_list, tests_list)
+		test_results = check_many_solutions(cfg, solutions_list, args.tests)
 except (StopError):
 	pass
 

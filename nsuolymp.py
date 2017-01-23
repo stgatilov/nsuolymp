@@ -762,7 +762,7 @@ def validate_tests_indices():
 			non_numeric.append(f)
 	# copy-pasted from http://stackoverflow.com/a/2154437
 	ranges = []
-	for k, g in itertools.groupby(enumerate(numeric), lambda (i,x):i-x):
+	for k, g in itertools.groupby(enumerate(numeric), lambda ix: ix[0]-ix[1]):
 	    group = map(operator.itemgetter(1), g)
 	    ranges.append((group[0], group[-1]))
 	results = []

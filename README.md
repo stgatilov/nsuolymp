@@ -10,6 +10,7 @@ Now you should make sure all packages used by *nsuolymp* are installed, run e.g.
 
     pip install sarge
     pip install psutil
+    pip install colorama
 
 On Windows, you'd better add `.PY` extension to PATHEXT environment variable globally.
 On POSIX, you should mark all scripts with shebang as executable (with `chmod`).

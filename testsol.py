@@ -33,9 +33,9 @@ if args.tl is None or args.ml is None:
 			args.tl = convert_default_time_limit(problem_limits[0])
 		if args.ml is None:
 			args.ml = problem_limits[1]
-if args.tl > 0.0:
+if args.tl and args.tl > 0.0:
 	cfg.tl = args.tl
-if args.ml > 0.0:
+if args.ml and args.ml > 0.0:
 	cfg.ml = args.ml
 
 compile_results = test_results = stress_results = None

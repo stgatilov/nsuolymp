@@ -159,6 +159,10 @@ So you might need to prepend `./` (dot slash) to generator executable name on Li
 
 On MacOS, you should run testsol as root (via `sudo`), otherwise it won't be able to enforce time and memory limits.
 
+## License
+
+This project is licensed under the terms of the MIT license (see LICENSE.txt).
+
 
  [Python]: https://www.python.org/downloads/
  [pip]: https://pip.pypa.io/en/stable/installing/

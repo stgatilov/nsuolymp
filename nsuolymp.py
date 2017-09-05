@@ -31,7 +31,7 @@ class save_cwd():
 def read_file_contents(filepath):
 	if not filepath or not path.isfile(filepath):
 		return None
-	with open(filepath, 'r') as f:
+	with open(filepath, 'rb') as f:
 		return f.read()
 
 # returns a function that can run given CMD line
@@ -230,23 +230,23 @@ def colored_verdicts(verdicts):
 def extract_samples(text):
 	if text is None:
 		return None
-	text = re.sub('%(.*?)\n', '', text) # note: false positives with percent as \%
+	text = re.sub(b'%(.*?)\n', b'', text) # note: false positives with percent as \%
 
-	exmp_re = r'''
+	exmp_re = br'''
 		\\exmp \{                  # the command
 			(?P<input>  .*?)       # input in braces
 		\} \{
 			(?P<output> .*?)       # output in braces
 		\}
 	'''
-	exmpfile_re = r'''
+	exmpfile_re = br'''
 		\\exmpfile \{              # the command
 			(?P<input_file>  .*?)  # input filename in braces
 		\} \{
 			(?P<output_file> .*?)  # output filename in braces
 		\}
 	'''
-	final_re = '(?sx) (%s)|(%s)' % (exmp_re, exmpfile_re)
+	final_re = b'(?sx) (%s)|(%s)' % (exmp_re, exmpfile_re)
 
 	all_samples = []
 	for match in re.finditer(final_re, text):
@@ -259,8 +259,8 @@ def extract_samples(text):
 			test_output = args['output']
 		if test_input is None or test_output is None:
 			return None
-		test_input = string.strip(test_input) + '\n'
-		test_output = string.strip(test_output) + '\n'
+		test_input = test_input.strip() + b'\n'
+		test_output = test_output.strip() + b'\n'
 		all_samples.append((test_input, test_output))
 	return all_samples
 
@@ -270,10 +270,10 @@ def extract_samples(text):
 def extract_limits(text):
 	if text is None:
 		return None
-	text = re.sub('%(.*?)\n', '', text) # note: false positives with percent as \%
+	text = re.sub(b'%(.*?)\n', b'', text) # note: false positives with percent as \%
 
-	problem_re  = r'(?x) \\begin \s* \{ problem \}'
-	problem_re += r'\s* \{ (.*?) \}' * 5
+	problem_re  = br'(?x) \\begin \s* \{ problem \}'
+	problem_re += br'\s* \{ (.*?) \}' * 5
 	match = re.search(problem_re, text)
 	if match:
 		tl_txt = match.group(4)
@@ -518,8 +518,8 @@ def controlled_run_solution(solution, time_limit = None, memory_limit = None, qu
 # if any of the files is not present, returns false
 def is_file_diff_empty(ap, bp):
 	try:
-		with open(ap, "r") as af:
-			with open(bp, "r") as bf:
+		with open(ap, "rb") as af:
+			with open(bp, "rb") as bf:
 				a_tokens = af.read().split()
 				b_tokens = bf.read().split()
 				return a_tokens == b_tokens
@@ -707,7 +707,7 @@ def print_solutions_results(data):
 # converts EOLN style of given byte string to system's default
 # note: data must be read and written to/from file in binary mode
 def convert_eoln(contents):
-	return contents.replace('\r\n', '\n').replace('\r', '\n').replace('\n', os.linesep)
+	return contents.replace(b'\r\n', b'\n').replace(b'\r', b'\n').replace(b'\n', bytes(os.linesep, "utf8"))
 
 # run validator on given test (i.e. input_file)
 # returns True on success, False on validation error, None if something is missing
@@ -793,14 +793,14 @@ def check_samples(statements_name = None, quiet = False):
 		if not (path.isfile(path_in) and path.isfile(path_out)):
 			printq(quiet, colored_verdict('R', "One of sample files is missing: %s and %s" % (path_in, path_out)))
 			return True
-		with open(path_in, 'rt') as f:
+		with open(path_in, 'rb') as f:
 			test_in = f.read()
-		if test_in != sample[0]:
+		if convert_eoln(test_in) != convert_eoln(sample[0]):
 			printq(quiet, colored_verdict('W', "Sample test input %s is different from statement" % path_in))
 			return True
 		copyfile(path_in, 'input.txt')
 		copyfile(path_out, 'answer.txt')
-		with open('output.txt', 'wt') as f:
+		with open('output.txt', 'wb') as f:
 			f.write(sample[1])
 		if run_checker(quiet) != 'A':
 			printq(quiet, colored_verdict('W', "Sample test %s has wrong output in statement" % path_in))

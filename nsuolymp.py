@@ -104,7 +104,7 @@ def if_exe_exists(f):
 
 # returns whether the given file is a java class file
 def is_java_class(f):
-	return path.isfile(f + '.class')
+	return ('$' not in f) and path.isfile(f + '.class')
 	
 # returns whether the given file is a directory with Task.class file
 def has_java_task(f):

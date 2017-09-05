@@ -707,7 +707,7 @@ def print_solutions_results(data):
 # converts EOLN style of given byte string to system's default
 # note: data must be read and written to/from file in binary mode
 def convert_eoln(contents):
-	return contents.replace(b'\r\n', b'\n').replace(b'\r', b'\n').replace(b'\n', bytes(os.linesep, "utf8"))
+	return contents.replace(b'\r\n', b'\n').replace(b'\r', b'\n').replace(b'\n', os.linesep.encode())
 
 # run validator on given test (i.e. input_file)
 # returns True on success, False on validation error, None if something is missing

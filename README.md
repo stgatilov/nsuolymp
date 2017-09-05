@@ -1,7 +1,7 @@
 ## Installation
 
 First of all, you should install [Python].
-The latest version of either Python 2 or Python 3 is OK.
+Both Python 3.5 or Python 2.7 are OK.
 You can download it from official site.
 Note that latest version of Python includes [pip] automatically.
 Both `python` and `pip` should be in PATH.

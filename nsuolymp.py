@@ -526,6 +526,20 @@ def is_file_diff_empty(ap, bp):
 	except IOError:
 		return False
 
+# given return code of checker process, returns verdict for solution
+def get_verdict_for_checker_code(errcode):
+	if errcode == 0:
+		return 'A'
+	if errcode == 1:
+		return 'W'
+	if errcode == 2:
+		return 'P'
+	if errcode == 3:
+		return 'J'
+	if errcode >= 0 and errcode <= 16:
+		return 'W'	# still can be a valid return
+	return 'J'		# most likely a crash
+
 # runs checker and returns its opinion on the output file
 # returns 'A' if output is correct, and 'W'/'P'/'J' otherwise
 # Note: CWD must be equal to the problem directory
@@ -538,15 +552,7 @@ def run_checker(quiet = False):
 		errcode = cmd_runner(quiet)('./check input.txt output.txt answer.txt').returncode
 	else:
 		errcode = 0 if is_file_diff_empty('output.txt', 'answer.txt') else 1
-	if errcode == 0:
-		return 'A'
-	if errcode == 1:
-		return 'W'
-	if errcode == 2:
-		return 'P'
-	if errcode == 3:
-		return 'J'
-	return 'W'		# treat unknown cases as WA
+	return get_verdict_for_checker_code(errcode)
 
 ################################### Archives ###################################
 

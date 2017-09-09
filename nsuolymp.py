@@ -763,8 +763,8 @@ def validate_tests_indices():
 	# copy-pasted from http://stackoverflow.com/a/2154437
 	ranges = []
 	for k, g in itertools.groupby(enumerate(numeric), lambda ix: ix[0]-ix[1]):
-	    group = list(map(operator.itemgetter(1), g))
-	    ranges.append((group[0], group[-1]))
+		group = list(map(operator.itemgetter(1), g))
+		ranges.append((group[0], group[-1]))
 	results = []
 	if non_numeric:
 		results.append(colored_verdict('W', 'Tests without indices: ') + str(non_numeric))

@@ -439,19 +439,6 @@ if os.name == 'nt':
 
 RunResult = namedtuple('RunResult', 'verdict exit_code time memory')
 
-# runs a process by Popen arguments
-# time and memory limits can be set (in seconds and megabytes respectively)
-# returns namedtuple with fields:
-#    verdict: 'A' if executed successfully, 'R' on nonzero return code, 'T' if TL exceeded, 'M' if ML exceeded
-#    exit_code: exit code returned by process on termination
-#    time: how much time was spent (in seconds)
-#    memory: peak memory consumption (in MB)
-def controlled_run(popen_args, time_limit = None, memory_limit = None, quiet = False):
-	proclaim_process_runs([popen_args], [time_limit], [memory_limit], quiet)
-	process = psutil.Popen(popen_args)
-	res = control_processes_execution([process], [time_limit], [memory_limit], quiet)
-	return res[0]
-
 # if not in quiet mode, prints some info about several processes soon to be started
 # each argument (except "quiet") is a list with one element per process
 def proclaim_process_runs(popen_args, time_limits, memory_limits, quiet = False):
@@ -468,8 +455,14 @@ def proclaim_process_runs(popen_args, time_limits, memory_limits, quiet = False)
 
 # controls execution of several processes just started via psutil.Popen (until all of them terminate)
 # processes - list of process handles returned from psutil.Popen
-# time_limits, memory_limits - lists of settings (see controlled_run), same-indexed as processes
-# returns list of RunResult-s (see controlled_run), same-indexed as processes
+# time_limits, memory_limits - lists of values, same-indexed as processes:
+#    time_limit: maximal cpu time in seconds
+#    memory_limit: maximal allowed memory usage in megabytes
+# returns list of RunResult-s, same-indexed as processes:
+#    verdict: 'A' if executed successfully, 'R' on nonzero return code, 'T' if TL exceeded, 'M' if ML exceeded
+#    exit_code: exit code returned by process on termination
+#    time: how much CPU time was spent (in seconds)
+#    memory: peak memory consumption (in MB)
 def control_processes_execution(processes, time_limits, memory_limits, quiet = False):
 	k = len(processes)
 	verdicts = [None] * k
@@ -529,18 +522,41 @@ def control_processes_execution(processes, time_limits, memory_limits, quiet = F
 
 # runs a solution by name (either an executable file or java class)
 # parameters and results as in controlled_run
-def controlled_run_solution(solution, time_limit = None, memory_limit = None, quiet = False):
+# if interactive = True, then solution is run connected to interactor
+def controlled_run_solution(solution, time_limit, memory_limit, interactive, quiet = False):
+	corrected_memory_limit = memory_limit
 	if if_exe_exists(solution):
 		solution_path = solution if os.name == 'nt' else path.join('./', solution)
-		return controlled_run(solution_path, time_limit, memory_limit, quiet)
-	assert(is_java_class(solution) or has_java_task(solution))
-	heap_size_key = '-Xmx1G' if memory_limit is None else '-Xmx%dM' % int(memory_limit)
-	popen_args = ['java', heap_size_key, '-Xms64M', '-Xss32M']
-	if is_java_class(solution):
-		popen_args += [path.splitext(solution)[0]]
-	elif has_java_task(solution):
-		popen_args += ['-cp', solution, 'Task']
-	return controlled_run(popen_args, time_limit, None, quiet)
+		popen_args = solution_path
+	else:
+		assert(is_java_class(solution) or has_java_task(solution))
+		heap_size_key = '-Xmx1G' if memory_limit is None else '-Xmx%dM' % int(memory_limit)
+		corrected_memory_limit = None
+		popen_args = ['java', heap_size_key, '-Xms64M', '-Xss32M']
+		if is_java_class(solution):
+			popen_args += [path.splitext(solution)[0]]
+		elif has_java_task(solution):
+			popen_args += ['-cp', solution, 'Task']
+
+	if interactive:
+		interactor_args = ['interactor', 'input.txt', 'output.txt']
+		args_list = [interactor_args, popen_args]
+		TLs = [time_limit * 2 + 5, time_limit] if time_limit is not None else [None, None]
+		MLs = [memory_limit + 256, corrected_memory_limit] if memory_limit is not None else [None, None]
+		proclaim_process_runs(args_list, TLs, MLs, quiet)
+		process_inter = psutil.Popen(interactor_args, stdin = subprocess.PIPE, stdout = subprocess.PIPE)
+		process_sol = psutil.Popen(popen_args, stdin = process_inter.stdout, stdout = process_inter.stdin)
+		inter_res, sol_res = control_processes_execution([process_inter, process_sol], TLs, MLs, quiet)
+		if inter_res.verdict not in ['A', 'R']:
+			return sol_res._replace(verdict = 'J')
+		if sol_res.verdict != 'A':
+			return sol_res
+		return sol_res._replace(verdict = get_verdict_for_checker_code(inter_res.exit_code))
+	else:
+		proclaim_process_runs([popen_args], [time_limit], [corrected_memory_limit], quiet)
+		process = psutil.Popen(popen_args)
+		res = control_processes_execution([process], [time_limit], [corrected_memory_limit], quiet)
+		return res[0]
 
 ############################## Diffs and checkers ##############################
 
@@ -655,20 +671,23 @@ class Config:
 # if gen_output = True, then:
 #   test's output file is ignored
 #   it is overwritten with the output of solution (unless it was terminated prematurely)
+# if interactor is present, solution is run with it
 def check_solution_on_test(cfg, solution, input_file, gen_output = False):
 	assert(path.dirname(path.abspath(solution)) == path.abspath(os.getcwd()))
 	copyfile(input_file, 'input.txt')
-	res = controlled_run_solution(solution, cfg.tl, cfg.ml, cfg.quiet)
+	interactive = if_exe_exists('interactor')
+	res = controlled_run_solution(solution, cfg.tl, cfg.ml, interactive, cfg.quiet)
 	if gen_output:
 		copyfile('output.txt', 'answer.txt')
-	else:
-		if path.isfile(get_output_by_input(input_file)):
-			copyfile(get_output_by_input(input_file), 'answer.txt')
-		elif res.verdict == 'A':
-			res = res._replace(verdict = 'O')
-	if (res.verdict == 'A'):
-		checker_res = run_checker(cfg.quiet)
-		res = res._replace(verdict = checker_res)
+	if not interactive:
+		if not gen_output:
+			if path.isfile(get_output_by_input(input_file)):
+				copyfile(get_output_by_input(input_file), 'answer.txt')
+			elif res.verdict == 'A':
+				res = res._replace(verdict = 'O')
+		if res.verdict == 'A':
+			checker_res = run_checker(cfg.quiet)
+			res = res._replace(verdict = checker_res)
 	printq(cfg.quiet, "on %s: %s" % (input_file, colored_verdict(res.verdict)))
 	if gen_output and res.verdict in ['A', 'W', 'P', 'J']:
 		copyfile('answer.txt', get_output_by_input(input_file))

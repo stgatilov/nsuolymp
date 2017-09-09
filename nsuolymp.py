@@ -437,6 +437,8 @@ if os.name == 'nt':
 	SEM_NOGPFAULTERRORBOX = 0x0002
 	ctypes.windll.kernel32.SetErrorMode(SEM_NOGPFAULTERRORBOX)
 
+RunResult = namedtuple('RunResult', 'verdict exit_code time memory')
+
 # runs a process by Popen arguments
 # time and memory limits can be set (in seconds and megabytes respectively)
 # returns namedtuple with fields:
@@ -444,56 +446,86 @@ if os.name == 'nt':
 #    exit_code: exit code returned by process on termination
 #    time: how much time was spent (in seconds)
 #    memory: peak memory consumption (in MB)
-RunResult = namedtuple('RunResult', 'verdict exit_code time memory')
 def controlled_run(popen_args, time_limit = None, memory_limit = None, quiet = False):
-	if not quiet:
-		ml_str = tl_str = None
-		if time_limit is not None:
-			tl_str = "%0.1lf" % time_limit 
-		if memory_limit is not None:
-			ml_str = "%0.1lf" % memory_limit 
-		print("Starting: " + str(popen_args) + "    [TL = {0}, ML = {1}]".format(tl_str, ml_str))
-
-	verdict = exit_code = None
-	max_cpu_time = max_memory = 0.0
-	start_real_time = time.time()
+	proclaim_process_runs([popen_args], [time_limit], [memory_limit], quiet)
 	process = psutil.Popen(popen_args)
+	res = control_processes_execution([process], [time_limit], [memory_limit], quiet)
+	return res[0]
+
+# if not in quiet mode, prints some info about several processes soon to be started
+# each argument (except "quiet") is a list with one element per process
+def proclaim_process_runs(popen_args, time_limits, memory_limits, quiet = False):
+	if quiet:
+		return
+	k = len(popen_args)
+	for i in range(k):
+		ml_str = tl_str = None
+		if time_limits[i] is not None:
+			tl_str = "%0.1lf" % time_limits[i]
+		if memory_limits[i] is not None:
+			ml_str = "%0.1lf" % memory_limits[i]
+		print("{0}: Starting: {1}    [TL = {2}, ML = {3}]".format(i, str(popen_args[i]), tl_str, ml_str))
+
+# controls execution of several processes just started via psutil.Popen (until all of them terminate)
+# processes - list of process handles returned from psutil.Popen
+# time_limits, memory_limits - lists of settings (see controlled_run), same-indexed as processes
+# returns list of RunResult-s (see controlled_run), same-indexed as processes
+def control_processes_execution(processes, time_limits, memory_limits, quiet = False):
+	k = len(processes)
+	verdicts = [None] * k
+	exit_codes = [None] * k
+	max_cpu_time = [0.0] * k
+	max_memory = [0.0] * k
+
+	def handle_process_termination(proc):
+		i = processes.index(proc)
+		if exit_codes[i] is not None:
+			return # already terminated earlier
+		exit_codes[i] = processes[i].returncode
+		printq(quiet, "%d: %s (err = %d, mem = %s MB, time = %s sec)" % (
+			i, 
+			"Finished" if verdicts[i] is None else get_verdict_full_name(verdicts[i]),
+			exit_codes[i],
+			color_highlight("%0.1f" % max_memory[i]),
+			color_highlight("%0.2f" % max_cpu_time[i])
+		))
+		if verdicts[i] is None:
+			verdicts[i] = ('A' if exit_codes[i] == 0 else 'R')
+
+	start_real_time = time.time()
 	while True:
 		try:
-			exit_code = process.wait(0.01)
+			gone, alive = psutil.wait_procs(processes, 0.01, handle_process_termination)
+			if len(alive) > 0:
+				raise psutil.TimeoutExpired(0)
 			break
 		except psutil.TimeoutExpired:
-			try:
-				max_cpu_time = max(max_cpu_time, process.cpu_times()[0])
-				max_memory = max(max_memory, process.memory_info()[0] / (2**20))
-				if time_limit is not None and max_cpu_time > time_limit:
-					verdict = 'T'
-					process.terminate()
+			for i in range(k):
+				process = processes[i]
+				try:
+					max_cpu_time[i] = max(max_cpu_time[i], process.cpu_times()[0])
+					max_memory[i] = max(max_memory[i], process.memory_info()[0] / (2**20))
+					if time_limits[i] is not None and max_cpu_time[i] > time_limits[i]:
+						verdicts[i] = 'T'
+						process.terminate()
+						continue
+					if memory_limits[i] is not None and max_memory[i] > memory_limits[i]:
+						verdicts[i] = 'M'
+						process.terminate()
+						continue
+					if time_limits[i] is not None and (time.time() - start_real_time) > (time_limits[i] * 3 + 1):
+						verdicts[i] = 'D'
+						process.terminate()
+						continue
+				except psutil.NoSuchProcess: # finished when we checked/terminated it
 					continue
-				if memory_limit is not None and max_memory > memory_limit:
-					verdict = 'M'
-					process.terminate()
-					continue
-				if time_limit is not None and (time.time() - start_real_time) > (time_limit * 3 + 1):
-					verdict = 'D'
-					process.terminate()
-					continue
-			except psutil.NoSuchProcess: # finished when we checked/terminated it
-				continue
 		except psutil.NoSuchProcess:	# is it possible?
 			break
 		except psutil.AccessDenied:		# perhaps OSX-specific
 			printq(quiet, "Access denied error (perhaps try sudo/admin)")
 
-	printq(quiet, "%s (err = %d, mem = %s MB, time = %s sec)" % (
-		"Finished" if verdict is None else get_verdict_full_name(verdict),
-		exit_code,
-		color_highlight("%0.1f" % max_memory),
-		color_highlight("%0.2f" % max_cpu_time)
-	))
-	if verdict is None:
-		verdict = ('A' if exit_code == 0 else 'R')
-	return RunResult(verdict, exit_code, max_cpu_time, max_memory)
+	res = [RunResult(verdicts[i], exit_codes[i], max_cpu_time[i], max_memory[i]) for i in range(k)]
+	return res
 
 # runs a solution by name (either an executable file or java class)
 # parameters and results as in controlled_run

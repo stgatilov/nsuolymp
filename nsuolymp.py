@@ -189,12 +189,14 @@ def get_verdict_full_name(verdict):
 		vstr = "Time limit exceeded"
 	if verdict == 'M':
 		vstr = "Memory limit exceeded"
-	if verdict == 'D':
+	if verdict == 'D': # idleness limit exceeded
 		vstr = "Deadlock"
 	if verdict == 'O':
 		vstr = "Output for test not found"
-	if verdict == '.':
+	if verdict == '.': # not asked to run this test
 		vstr = "Skipped"
+	if verdict == 'K': # intermediate + interactive only
+		vstr = "Killed"
 	return vstr
 
 # returns colored version of a vstr, according to given verdict (single-letter or full)
@@ -459,11 +461,13 @@ def proclaim_process_runs(popen_args, time_limits, memory_limits, quiet = False)
 #    time_limit: maximal cpu time in seconds
 #    memory_limit: maximal allowed memory usage in megabytes
 # returns list of RunResult-s, same-indexed as processes:
-#    verdict: 'A' if executed successfully, 'R' on nonzero return code, 'T' if TL exceeded, 'M' if ML exceeded
+#    verdict: 'A' if executed successfully, 'R' on nonzero return code, 'T' if TL exceeded, 'M' if ML exceeded, 'D' on deadlock
 #    exit_code: exit code returned by process on termination
 #    time: how much CPU time was spent (in seconds)
 #    memory: peak memory consumption (in MB)
-def control_processes_execution(processes, time_limits, memory_limits, quiet = False):
+# if deadpipe_guard is set, then all remaining processes will be terminated (with 'K' verdict) if they all seem to wait 
+# this happens if idle time elapsed since last process termination is greater than deadpipe_guard for all alive processes
+def control_processes_execution(processes, time_limits, memory_limits, deadpipe_guard = None, quiet = False):
 	k = len(processes)
 	verdicts = [None] * k
 	exit_codes = [None] * k
@@ -486,6 +490,7 @@ def control_processes_execution(processes, time_limits, memory_limits, quiet = F
 			verdicts[i] = ('A' if exit_codes[i] == 0 else 'R')
 
 	start_real_time = time.time()
+	last_alive_count = k
 	while True:
 		try:
 			gone, alive = psutil.wait_procs(processes, 0.01, handle_process_termination)
@@ -495,9 +500,11 @@ def control_processes_execution(processes, time_limits, memory_limits, quiet = F
 		except psutil.TimeoutExpired:
 			for i in range(k):
 				process = processes[i]
+				if not process.is_running():
+					continue
 				try:
-					max_cpu_time[i] = max(max_cpu_time[i], process.cpu_times()[0])
-					max_memory[i] = max(max_memory[i], process.memory_info()[0] / (2**20))
+					max_cpu_time[i] = max(max_cpu_time[i], process.cpu_times().user)
+					max_memory[i] = max(max_memory[i], process.memory_info().rss / (2**20))
 					if time_limits[i] is not None and max_cpu_time[i] > time_limits[i]:
 						verdicts[i] = 'T'
 						process.terminate()
@@ -506,12 +513,29 @@ def control_processes_execution(processes, time_limits, memory_limits, quiet = F
 						verdicts[i] = 'M'
 						process.terminate()
 						continue
-					if time_limits[i] is not None and (time.time() - start_real_time) > (time_limits[i] * 3 + 1):
+					if time_limits[i] is not None and time.time() - start_real_time > (time_limits[i] * 3 + 1):
 						verdicts[i] = 'D'
 						process.terminate()
 						continue
 				except psutil.NoSuchProcess: # finished when we checked/terminated it
 					continue
+
+			if deadpipe_guard is not None and len(alive) < k:	#note: only for interactive problems!
+				idle_time = [time.time() - start_real_time - max_cpu_time[i] for i in range(k)]
+				if len(alive) < last_alive_count:
+					last_alive_count = len(alive)
+					last_idle_time = idle_time[:]
+				# alive processes with very small idle time after last process termination:
+				still_working = list(filter(lambda i: processes[i].is_running() and idle_time[i] - last_idle_time[i] < deadpipe_guard, range(k)))
+				if len(still_working) == 0:
+					for i in range(k):
+						if processes[i].is_running():
+							verdicts[i] = 'K'
+							try:
+								processes[i].terminate()
+							except psutil.NoSuchProcess:
+								continue
+
 		except psutil.NoSuchProcess:	# is it possible?
 			break
 		except psutil.AccessDenied:		# perhaps OSX-specific
@@ -543,19 +567,30 @@ def controlled_run_solution(solution, time_limit, memory_limit, interactive, qui
 		args_list = [interactor_args, popen_args]
 		TLs = [time_limit * 2 + 5, time_limit] if time_limit is not None else [None, None]
 		MLs = [memory_limit + 256, corrected_memory_limit] if memory_limit is not None else [None, None]
+
 		proclaim_process_runs(args_list, TLs, MLs, quiet)
 		process_inter = psutil.Popen(interactor_args, stdin = subprocess.PIPE, stdout = subprocess.PIPE)
 		process_sol = psutil.Popen(popen_args, stdin = process_inter.stdout, stdout = process_inter.stdin)
-		inter_res, sol_res = control_processes_execution([process_inter, process_sol], TLs, MLs, quiet)
-		if inter_res.verdict not in ['A', 'R']:
+		inter_res, sol_res = control_processes_execution([process_inter, process_sol], TLs, MLs, 0.1, quiet)
+
+		exitcode_verdict = get_verdict_for_checker_code(inter_res.exit_code)
+		assert(inter_res.verdict != 'K' or sol_res.verdict != 'K')
+		if inter_res.verdict not in ['A', 'R', 'K']:  # T/M/D
 			return sol_res._replace(verdict = 'J')
-		if sol_res.verdict != 'A':
+		if sol_res.verdict not in ['A', 'R', 'K']:    # T/M/D
 			return sol_res
-		return sol_res._replace(verdict = get_verdict_for_checker_code(inter_res.exit_code))
+		if sol_res.verdict == 'R':
+			if exitcode_verdict != 'J' and inter_res.verdict != 'K': # may be simply WA e.g. in case of java
+				return sol_res._replace(verdict = exitcode_verdict)
+			else:
+				return sol_res
+		if inter_res.verdict == 'K':                  # solution ended prematurely
+			return sol_res._replace(verdict = 'W')
+		return sol_res._replace(verdict = exitcode_verdict)
 	else:
 		proclaim_process_runs([popen_args], [time_limit], [corrected_memory_limit], quiet)
 		process = psutil.Popen(popen_args)
-		res = control_processes_execution([process], [time_limit], [corrected_memory_limit], quiet)
+		res = control_processes_execution([process], [time_limit], [corrected_memory_limit], None, quiet)
 		return res[0]
 
 ############################## Diffs and checkers ##############################

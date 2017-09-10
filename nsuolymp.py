@@ -556,7 +556,7 @@ def controlled_run_solution(solution, time_limit, memory_limit, interactive, qui
 		assert(is_java_class(solution) or has_java_task(solution))
 		heap_size_key = '-Xmx1G' if memory_limit is None else '-Xmx%dM' % int(memory_limit)
 		corrected_memory_limit = None
-		popen_args = ['java', heap_size_key, '-Xms64M', '-Xss32M']
+		popen_args = ['java', heap_size_key, '-Xms64M', '-Xss32M', '-Duser.country=US', '-Duser.language=en']
 		if is_java_class(solution):
 			popen_args += [path.splitext(solution)[0]]
 		elif has_java_task(solution):

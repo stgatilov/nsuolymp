@@ -56,8 +56,7 @@ def main(argv = None):
 			if len(indices_results) > 0:
 				on_error(4)
 		if args.output:
-			output_files = map(get_output_by_input, get_tests_inputs())
-			output_results = [f for f in output_files if not path.isfile(f)]
+			output_results = check_output_files()
 			if len(output_results) > 0:
 				on_error(5)
 	except (StopError):
@@ -73,11 +72,7 @@ def main(argv = None):
 	if indices_results is not None:
 		print_validate_indices_results(indices_results)
 	if output_results is not None:
-		if output_results:
-			print(colored_verdict('W', "Missing output files: ") + str(output_results))
-		else:
-			print(colored_verdict('A', "All output files are present"))
-		
+		print_check_output_files(output_results)
 
 	return ret.code
 

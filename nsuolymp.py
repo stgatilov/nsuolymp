@@ -880,6 +880,7 @@ def print_validate_indices_results(results):
 # checks whether all samples from the problem statement are properly included in the tests
 # returns list of bad tests, which are different/incompatible/nonexistent with the corresponding samples
 #      or some string if failed to extract samples from the problem statement
+# in case of interactive problem, returns empty string (which indicates no error)
 def check_samples(statements_name = None, quiet = False):
 	def is_sample_bad(path_in, path_out, sample, quiet):
 		if not (path.isfile(path_in) and path.isfile(path_out)):
@@ -900,6 +901,8 @@ def check_samples(statements_name = None, quiet = False):
 		printq(quiet, "Sample test %s is ok" % path_in)
 		return False
 
+	if if_exe_exists('interactor'):
+		return ""  # quietly omit the check
 	samples = read_samples(find_problem_statement(statements_name))
 	if samples is None:
 		return "not found"
@@ -914,12 +917,32 @@ def check_samples(statements_name = None, quiet = False):
 
 # pretty-print results of check_samples call
 def print_check_samples_results(results):
-	if type(results) is str:
+	if results == "not found":
 		print(colored_verdict('T', "Failed to extract samples from problem statement!"))
+	elif results == "":
+		print(colored_verdict('R', "Samples not checked for interactive problem"))
 	elif len(results) == 0:
 		print(colored_verdict('A', "Sample tests are compatible"))
 	else:
 		print(colored_verdict('W', "Incompatible sample tests: ") + str(results))
+
+# finds tests (input files) with missing output files
+# returns them as a list (or "" if check is not applicable)
+def check_output_files():
+	if if_exe_exists('interactor'):
+		return ""  # quietly omit the check
+	output_files = list(map(get_output_by_input, get_tests_inputs()))
+	output_results = [f for f in output_files if not path.isfile(f)]
+	return output_results
+
+#pretty-print results of check_output_files call
+def print_check_output_files(results):
+	if results == "":
+		print(colored_verdict('R', "Output files not checked for interactive problem"))
+	elif len(results) == 0:
+		print(colored_verdict('A', "All output files are present"))
+	else:
+		print(colored_verdict('W', "Missing output files: ") + str(results))
 
 # run stress-testing of given solutions on given generator
 # returns an infinite iterable sequence of problematic seeds (i.e. works as a generator of bad tests)

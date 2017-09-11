@@ -9,7 +9,7 @@ def main(argv = None):
 	parser.add_argument('-q', '--quiet', help = "print only results (no intermediate messages)", action = "store_true")
 	parser.add_argument('-e', '--stop-on-error', help = "stop script after first error encountered", action = "store_true")
 	parser.add_argument('-v', '--validator', help = "compile validator", action = "store_true")
-	parser.add_argument('-c', '--checker', help = "compile checker", action = "store_true")
+	parser.add_argument('-c', '--checker', help = "compile checker & interactor", action = "store_true")
 	parser.add_argument('-s', '--solutions', help = "compile all solutions", action = "store_true")
 	parser.add_argument('-g', '--generators', help = "compile all generators", action = "store_true")
 	parser.add_argument('-a', '--all', help = "compile all problem stuff (shortcut for -v -c -s -g)", action = "store_true")

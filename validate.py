@@ -7,7 +7,7 @@ def main(argv = None):
 	parser = argparse.ArgumentParser(description = "Validates tests in various ways.")
 	parser.add_argument('-q', '--quiet', help = "print only results (no intermediate messages)", action = "store_true")
 	parser.add_argument('-e', '--stop-on-error', help = "stop script after first error encountered", action = "store_true")
-	parser.add_argument('-c', '--compile', help = "compile validator/checker if required", action = "store_true")
+	parser.add_argument('-c', '--compile', help = "compile validator/checker/interactor if required", action = "store_true")
 	parser.add_argument('-v', '--validator', help = "check all tests against validator", action = "store_true")
 	parser.add_argument('-s', '--samples', help = "check that samples are taken from statements", action = "store_true")
 	parser.add_argument('-i', '--indices', help = "check tests' names", action = "store_true")

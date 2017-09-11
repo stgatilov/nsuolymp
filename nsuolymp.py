@@ -1014,6 +1014,7 @@ def get_sources_in_problem(solutions = False, generators = False, checker = Fals
 		check_and_add('validator.cpp')
 	if checker:
 		check_and_add('check.cpp')
+		check_and_add('interactor.cpp')
 	if generators:
 		sources.extend(get_generator_sources())
 	if solutions:

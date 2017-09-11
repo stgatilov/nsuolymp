@@ -7,7 +7,7 @@ def main(argv = None):
 	# handle cmd arguments
 	parser = argparse.ArgumentParser(description = "Packages tests into nsuts-ready zip.")
 	parser.add_argument('-q', '--quiet', help = "print only results (no intermediate messages)", action = "store_true")
-	parser.add_argument('--no-compile', help = "skip compilation of validator/checker", action = "store_true")
+	parser.add_argument('--no-compile', help = "skip compilation of validator/checker/interactor", action = "store_true")
 	parser.add_argument('--no-validator', help = "skip checking tests with validator", action = "store_true")
 	parser.add_argument('--no-samples', help = "skip checking first tests against samples from statement", action = "store_true")
 	parser.add_argument('--path', help = "path to output zip-file or directory (by default _packages in contest dir)", metavar = "PATH")
@@ -41,13 +41,16 @@ def main(argv = None):
 	if ret_code != 0:
 		return ret_code
 
-	# pack Windows executable of checker (always if present)
+	# pack Windows executable of checker/interactor (always if present)
 	if path.isfile('check.exe'):
 		packed_file_list += ['check.exe']
+	if path.isfile('interactor.exe'):
+		packed_file_list += ['interactor.exe']
 
 	# pack input/output test files
 	packed_file_list += get_tests_inputs()
-	packed_file_list += map(get_output_by_input, get_tests_inputs())
+	if not if_exe_exists('interactor'):
+		packed_file_list += map(get_output_by_input, get_tests_inputs())
 
 	# deduce path to output archive
 	output_filename = args.path

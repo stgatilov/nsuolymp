@@ -78,14 +78,17 @@ Here are some rules:
 
 6. Checker must be exactly named, written in C++, prepared with testlib (if necessary for the problem).
 
-7. Each solution's name must start with `sol_`.
+7. For interactive problem, interactor source must be named exactly `interactor.cpp`, prepared with testlib.
+   Combining interactor with checker is not supported. Output files for tests are ignored.
 
-8. For nsuts, java solution must be a subdirectory with `Task.java` or/and `Task.class` file in it.
+8. Each solution's name must start with `sol_`.
+
+9. For nsuts, java solution must be a subdirectory with `Task.java` or/and `Task.class` file in it.
    Ordinary java files are also supported as solutions (e.g. `sol_tl.java` or/and `sol_tl.class`).
 
-9. Correct solutions which must pass all tests should have `_ok` in their name.
+10. Correct solutions which must pass all tests should have `_ok` in their name.
 
-10. Each generator's name must start with `gen_`
+11. Each generator's name must start with `gen_`
 
 
 ## Samples
@@ -156,6 +159,9 @@ You can customize compilation (compiler parameters and order of preference) in `
 
 For stress-testing, you have to pass full generator command line in double quotes after `-s`.
 So you might need to prepend `./` (dot slash) to generator executable name on Linux or MacOS.
+
+On Windows 10, python scripts may stop working with output redirection.
+This issue can be solved by editing registry: https://stackoverflow.com/a/38901036/556899
 
 On MacOS, you should run testsol as root (via `sudo`), otherwise it won't be able to enforce time and memory limits.
 

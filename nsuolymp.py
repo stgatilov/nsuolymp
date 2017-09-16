@@ -748,7 +748,7 @@ def check_solution(cfg, solution, tests_filter = None, gen_output = False):
 	return res_list
 
 # returns formatted version of solution results
-# run_results must be a RunResult tuple
+# run_results must be an array of RunResult tuples
 # it represents single row in table of results (returned as list of colored strings)
 def format_solution_result(solution_name, run_results):
 	total_verdict = 'A'

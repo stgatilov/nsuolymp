@@ -545,11 +545,14 @@ def control_processes_execution(processes, time_limits, memory_limits, deadpipe_
 	return res
 
 # runs a solution by name (either an executable file or java class)
+# if "solution" is a list, then it is run directly via Popen
 # parameters and results as in controlled_run
 # if interactive = True, then solution is run connected to interactor
 def controlled_run_solution(solution, time_limit, memory_limit, interactive, quiet = False):
 	corrected_memory_limit = memory_limit
-	if if_exe_exists(solution):
+	if type(solution) != str:
+		popen_args = solution
+	elif if_exe_exists(solution):
 		solution_path = solution if os.name == 'nt' else path.join('./', solution)
 		popen_args = solution_path
 	else:

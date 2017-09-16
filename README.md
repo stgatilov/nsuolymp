@@ -149,6 +149,10 @@ Stress-test two solutions with testlib generator `gen_random` (with parameters `
 
 	testsol sol_sg_ok sol_sg_dumb -s "gen_random 10 3 5"
 
+Just run `cool_program.exe` and see how much time/memory it takes:
+
+	runsol cool_program
+
 
 ## Notes
 

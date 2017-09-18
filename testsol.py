@@ -46,7 +46,7 @@ try:
 	# find out what should we compile
 	compile_list = []
 
-	if args.compile or not if_exe_exists('check'):
+	if args.compile or (not if_exe_exists('check') and not if_exe_exists('interactor')):
 		compile_list.extend(get_sources_in_problem(checker = True))
 	if args.compile and args.stress:
 		compile_list.extend(get_sources_in_problem(validator = True))

@@ -574,7 +574,7 @@ def controlled_run_solution(solution, time_limit, memory_limit, interactive, qui
 		proclaim_process_runs(args_list, TLs, MLs, quiet)
 		process_inter = psutil.Popen(interactor_args, stdin = subprocess.PIPE, stdout = subprocess.PIPE)
 		process_sol = psutil.Popen(popen_args, stdin = process_inter.stdout, stdout = process_inter.stdin)
-		inter_res, sol_res = control_processes_execution([process_inter, process_sol], TLs, MLs, 0.1, quiet)
+		inter_res, sol_res = control_processes_execution([process_inter, process_sol], TLs, MLs, 0.5, quiet)
 
 		exitcode_verdict = get_verdict_for_checker_code(inter_res.exit_code)
 		assert(inter_res.verdict != 'K' or sol_res.verdict != 'K')

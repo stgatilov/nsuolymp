@@ -566,7 +566,8 @@ def controlled_run_solution(solution, time_limit, memory_limit, interactive, qui
 			popen_args += ['-cp', solution, 'Task']
 
 	if interactive:
-		interactor_args = ['interactor', 'input.txt', 'output.txt']
+		interactor_name = 'interactor'
+		interactor_args = [interactor_name if os.name == 'nt' else path.join('./', interactor_name), 'input.txt', 'output.txt']
 		args_list = [interactor_args, popen_args]
 		TLs = [time_limit * 2 + 5, time_limit] if time_limit is not None else [None, None]
 		MLs = [memory_limit + 256, corrected_memory_limit] if memory_limit is not None else [None, None]

@@ -7,15 +7,18 @@ import psutil							# for measuring CPU time and memory
 import colorama							# for colored console output (cross-platform)
 from os import path
 from collections import namedtuple
+from typing import Any, Optional, Callable, Union, Iterable, Pattern, List, Tuple, Dict
 from nsuolymp_cfg import *	# load some user preferences
 
 # print all the given things if quiet = False
 def printq(quiet, *args):
+	# type: (bool, *Any) -> None
 	if not quiet:
 		print(*args)
 
 # wrapper for copying files
 def copyfile(src, dst):
+	# type: (str, str) -> None
 	if path.abspath(src) == path.abspath(dst):
 		return
 	shutil.copyfile(src, dst)
@@ -29,6 +32,7 @@ class save_cwd():
 
 # returns contents of file by given path (or None if it is not present)
 def read_file_contents(filepath):
+	# type: (Optional[Union[str, bytes]]) -> Optional[bytes]
 	if not filepath or not path.isfile(filepath):
 		return None
 	with open(filepath, 'rb') as f:
@@ -37,6 +41,7 @@ def read_file_contents(filepath):
 # returns a function that can run given CMD line
 # it supresses output to stdout/stderr if quiet is set
 def cmd_runner(quiet = False):
+	# type: (bool) -> Callable[[str], sarge.Pipeline]
 	return sarge.capture_both if quiet else sarge.run
 
 ################################# Test files ###################################
@@ -44,20 +49,24 @@ def cmd_runner(quiet = False):
 # returns index of test from its filename
 # absolute/relative, input/output does not matter
 def get_test_index(f):
+	# type: (str) -> int
 	name = path.splitext(path.basename(f))[0]
 	return int(name)
 
 # returns relative path to input file of test with given index
 def get_test_input(idx):
+	# type: (int) -> str
 	return 'tests/%s.in' % str(idx)
 
 # returns output file by a path to input file
 def get_output_by_input(f):
+	# type: (str) -> str
 	return path.splitext(f)[0] + '.out'
 
 # returns list of tests for current problem, sorted by test index
 # CWD must be set to problem's directory
 def get_tests_inputs():
+	# type: () -> Iterable[str]
 	all_t = glob.glob('tests/*.in')
 	def sort_key(name):
 		try:
@@ -74,6 +83,7 @@ def get_tests_inputs():
 #   bad*  : matches any test whose name suits the glob 'bad*', e.g. 'bad', 'bad4', 'bad_luck'
 # Note that the filter applies to basename of the test (no directories, no extension)
 def if_test_passes_filter(test, filter_str):
+	# type: (str, str) -> bool
 	if filter_str is None:
 		return True
 	name = path.splitext(path.basename(test))[0]
@@ -100,14 +110,17 @@ def if_test_passes_filter(test, filter_str):
 # returns whether an executable file with given name (path) exists
 # f must not have extension; checks for both f and f.exe
 def if_exe_exists(f):
+	# type: (str) -> bool
 	return path.isfile(f) or path.isfile(f + '.exe')
 
 # returns whether the given file is a java class file
 def is_java_class(f):
+	# type: (str) -> bool
 	return ('$' not in f) and path.isfile(f + '.class')
 	
 # returns whether the given file is a directory with Task.class file
 def has_java_task(f):
+	# type: (str) -> bool
 	return path.isdir(f) and path.isfile(path.join(f, 'Task.class'))
 	
 # returns whether a given file/directory is a problem solution
@@ -117,12 +130,14 @@ def has_java_task(f):
 #   class file with .class extension    (proper way)
 #   a directory with Task.class in it   (for old nsuts)
 def is_solution(f):
+	# type: (str) -> bool
 	return if_exe_exists(f) or is_java_class(f) or has_java_task(f)
 
 # returns list of solutions for current problem
 # CWD must be set to problem's directory
 # by convention its name must have predetermined prefix, also it must be executable
 def get_solutions():
+	# type: () -> List[str]
 	all_files = glob.glob('*')
 	files_noext = list(set([path.splitext(f)[0] for f in all_files]))
 	files_sol = filter(lambda f : path.basename(f).startswith('sol_'), files_noext)
@@ -136,18 +151,21 @@ colorama.init()
 
 # returns bright version of a string
 def color_highlight(s):
+	# type: (str) -> str
 	return colorama.Style.BRIGHT + s + colorama.Style.RESET_ALL
 
 # taken from here: http://stackoverflow.com/a/14693789/556899
-_ansi_color_regex = re.compile(r'\x1b[^m]*m')
+_ansi_color_regex = re.compile(r'\x1b[^m]*m') # type: Pattern
 # returns string with all the color escape codes removed
 def stripcolor(s):
+	# type: (str) -> str
 	res = _ansi_color_regex.sub("", s)
 	return res
 
 # pretty-print a table with colors
 # workaround for texttable's inability to handle escape codes for colors
 def draw_table_colored(data):
+	# type: (Optional[List[List[str]]]) -> str
 	if not data:
 		return ''
 	# manual table construction, supports colors
@@ -174,6 +192,7 @@ def draw_table_colored(data):
 
 # returns full name of single-letter verdict
 def get_verdict_full_name(verdict):
+	# type: (str) -> str
 	vstr = "(none)"
 	if verdict == 'A':
 		vstr = "Accepted"
@@ -201,6 +220,7 @@ def get_verdict_full_name(verdict):
 
 # returns colored version of a vstr, according to given verdict (single-letter or full)
 def colored_verdict(verdict, vstr = None):
+	# type: (str, str) -> str
 	if vstr is None:
 		vstr = verdict
 	if verdict[0] == 'A':
@@ -221,6 +241,7 @@ def colored_verdict(verdict, vstr = None):
 
 # returns colored version of a string with verdicts
 def colored_verdicts(verdicts):
+	# type: (Iterable[str]) -> str
 	return ''.join([colored_verdict(v) for v in verdicts])
 
 ############################## Problem statements ##############################
@@ -230,6 +251,7 @@ def colored_verdicts(verdicts):
 # returns None on fail
 # Note: in case of \exmpfile command, paths are searched relative to CWD
 def extract_samples(text):
+	# type: (bytes) -> Optional[List[Tuple[bytes, bytes]]]
 	if text is None:
 		return None
 	text = re.sub(b'%(.*?)\n', b'', text) # note: false positives with percent as \%
@@ -270,6 +292,7 @@ def extract_samples(text):
 # returns pair of (tl, ml), where: tl is in seconds, ml is in MB
 # returns None on fail
 def extract_limits(text):
+	# type: (Optional[bytes]) -> Optional[Tuple[float, float]]
 	if text is None:
 		return None
 	text = re.sub(b'%(.*?)\n', b'', text) # note: false positives with percent as \%
@@ -293,6 +316,7 @@ def extract_limits(text):
 # if problem_name is not specified, it is determined as the last directory in CWD
 # Note: CWD must be equal to the problem's directory
 def find_problem_statement(statements_name = None, problem_name = None):
+	# type: (Optional[str], Optional[str]) -> Optional[str]
 	if statements_name is None:
 		statements_name = '_statements'
 	if problem_name is None:
@@ -307,9 +331,10 @@ def find_problem_statement(statements_name = None, problem_name = None):
 #    (can be obtained from find_problem_statement)
 # see extract_samples for description of return value
 def read_samples(statement_path):
-	if statement_path is None:
-		return None
+	# type: (Optional[str]) -> Optional[List[Tuple[bytes, bytes]]]
 	statement_text = read_file_contents(statement_path)
+	if statement_text is None or statement_path is None:
+		return None
 	with save_cwd():
 		os.chdir(path.dirname(statement_path))
 		os.chdir(os.pardir)
@@ -320,6 +345,7 @@ def read_samples(statement_path):
 #    (can be obtained from find_problem_statement)
 # see extract_limits for description of return value
 def read_limits(statement_path):
+	# type: (Optional[str]) -> Optional[Tuple[float, float]]
 	return extract_limits(read_file_contents(statement_path))
 
 ############################## Compiling sources ###############################
@@ -328,11 +354,13 @@ def read_limits(statement_path):
 # in case of c++/pas, it must have commonly used extension
 # in case of java, it must be either a java source file or a directory with Task.java in it
 def is_source(f):
+	# type: (str) -> bool
 	return path.splitext(f)[1] in ['.cpp', '.c', '.c++', '.cxx', '.pas', '.dpr', '.java'] or path.isfile(path.join(f, 'Task.java'))
 
 # returns list of generator source files for current problem
 # CWD must be set to problem's directory
 def get_generator_sources():
+	# type: () -> List[str]
 	all_files = glob.glob('*')
 	files_gen = filter(lambda f : path.basename(f).startswith('gen_'), all_files)
 	solutions = filter(is_source, files_gen)
@@ -341,6 +369,7 @@ def get_generator_sources():
 # returns list of solution source files for current problem
 # CWD must be set to problem's directory
 def get_solution_sources():
+	# type: () -> List[str]
 	all_files = glob.glob('*')
 	files_sol = filter(lambda f : path.basename(f).startswith('sol_'), all_files)
 	solutions = filter(is_source, files_sol)
@@ -351,6 +380,7 @@ def get_solution_sources():
 # in fact, it is similar to "which" or "where" shell command
 # e.g. given "cl" should return "C:\Prog...\VC\bin\amd64\cl.exe"
 def get_command_path(f):
+	# type: (str) -> Optional[str]
 	# taken from http://stackoverflow.com/a/377028/556899
 	for path in os.environ["PATH"].split(os.pathsep):
 		path = path.strip('"')
@@ -361,12 +391,14 @@ def get_command_path(f):
 
 # checks if the program is globally installed
 def if_command_exists(f):
+	# type: (str) -> bool
 	return (get_command_path(f) is not None)
 
 # returns language string for specified source file
 # in some cases mode is appended to the string (e.g. for a directory with Task.java)
 # if language is unknown, then None is returned
 def guess_source_language(source):
+	# type: (str) -> Optional[str]
 	(name, ext) = path.splitext(source)
 	if ext in ['.cpp', '.c', '.c++', '.cxx']:
 		return 'cpp'		# gcc/msvc is determined later
@@ -383,6 +415,7 @@ def guess_source_language(source):
 # returns None if specified compiler is not found or cannot be used
 # note: prefer using compile_source instead of this one
 def get_compile_cmd(source_local, compiler, compiler_flags):
+	# type: (str, str, Dict[str, str]) -> Optional[str]
 	if compiler in ['cl', 'dcc32'] and os.name != 'nt':
 		return None
 	if not if_command_exists(compiler):
@@ -397,6 +430,7 @@ def get_compile_cmd(source_local, compiler, compiler_flags):
 # unless you pass compiler_flags and compiler_order arguments, global compiler settings are used
 # CWD is not important, and it is changed only temporarily
 def compile_source_impl(source, language = None, compiler_flags = None, compiler_order = None, quiet = False):
+	# type: (str, Optional[str], Optional[Dict[str, str]], Optional[Dict[str, List[str]]], bool) -> bool
 	if compiler_flags is None:
 		compiler_flags = default_compiler_flags
 	if compiler_order is None:
@@ -411,6 +445,9 @@ def compile_source_impl(source, language = None, compiler_flags = None, compiler
 		return cmd_runner(quiet)(cmd)
 	err = None
 	order = compiler_order.get(language.split()[0])
+	if order is None:
+		printq(quiet, "Compiler order is not set for target %s" % colored_verdict('W', source))
+		return False
 	with save_cwd():
 		os.chdir(path.dirname(path.abspath(source)))
 		source_local = path.basename(source)

@@ -863,11 +863,16 @@ def print_solutions_results(data):
 	text_table = [format_solution_result(*elem) for elem in data]
 	print(draw_table_colored(text_table))
 
-# converts EOLN style of given byte string to system's default
+# converts EOLN style of given byte string to system's default (or to specified style)
 # note: data must be read and written to/from file in binary mode
-def convert_eoln(contents):
-	# type: (bytes) -> bytes
-	return contents.replace(b'\r\n', b'\n').replace(b'\r', b'\n').replace(b'\n', os.linesep.encode())
+def convert_eoln(contents, style = ""):
+	# type: (bytes, str) -> bytes
+	wanted_eol = os.linesep.encode()
+	if style.lower() in ['linux', 'unix', 'lf']:
+		wanted_eol = b'\n'
+	if style.lower() in ['win', 'windows', 'dos', 'crlf']:
+		wanted_eol = b'\r\n'
+	return contents.replace(b'\r\n', b'\n').replace(b'\r', b'\n').replace(b'\n', wanted_eol)
 
 # run validator on given test (i.e. input_file)
 # returns True on success, False on validation error, None if something is missing

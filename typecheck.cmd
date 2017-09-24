@@ -1,1 +1,1 @@
-mypy compile.py --ignore-missing-imports  --strict-optional
+mypy compile.py --strict-optional

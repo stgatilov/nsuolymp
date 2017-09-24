@@ -1,1 +1,1 @@
-mypy compile.py --strict-optional
+mypy compile.py --strict

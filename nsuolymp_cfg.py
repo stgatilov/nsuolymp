@@ -24,4 +24,5 @@ validator_eoln_relaxed = False
 # this function is applied to the time limit extracted from the problem statement
 # you can adjust this function in order to match approximately speed of the testing server
 def convert_default_time_limit(tl):
+	# type: (float) -> float
 	return tl		# e.g.:  1.5 * tl

@@ -26,8 +26,10 @@ def copyfile(src, dst):
 # context manager to restore CWD easily
 class save_cwd():
 	def __enter__(self):
+		# type: () -> None
 		self.cwd = os.getcwd();
 	def __exit__(self, type, value, traceback):
+		# type: (...) -> None
 		os.chdir(self.cwd)
 
 # returns contents of file by given path (or None if it is not present)
@@ -70,10 +72,11 @@ def get_tests_inputs():
 	# type: () -> Iterable[str]
 	all_t = glob.glob('tests/*.in')
 	def sort_key(name):
+		# type: (str) -> Tuple[int, Union[int, str]]
 		try:
-			return [0, get_test_index(name)]
+			return (0, get_test_index(name))
 		except ValueError:
-			return [1, name]
+			return (1, name)
 	return sorted(all_t, key = sort_key)
 
 # returns True when test passes user-specified filter (and False otherwise)
@@ -156,7 +159,7 @@ def color_highlight(s):
 	return colorama.Style.BRIGHT + s + colorama.Style.RESET_ALL
 
 # taken from here: http://stackoverflow.com/a/14693789/556899
-_ansi_color_regex = re.compile(r'\x1b[^m]*m') # type: Pattern
+_ansi_color_regex = re.compile(r'\x1b[^m]*m') # type: Pattern[str]
 # returns string with all the color escape codes removed
 def stripcolor(s):
 	# type: (str) -> str
@@ -221,7 +224,7 @@ def get_verdict_full_name(verdict):
 
 # returns colored version of a vstr, according to given verdict (single-letter or full)
 def colored_verdict(verdict, vstr = None):
-	# type: (str, str) -> str
+	# type: (str, Optional[str]) -> str
 	if vstr is None:
 		vstr = verdict
 	if verdict[0] == 'A':
@@ -442,6 +445,7 @@ def compile_source_impl(source, language = None, compiler_flags = None, compiler
 			printq(quiet, colored_verdict('W', "No language is known for target %s" % source))
 			return False
 	def runner(cmd):
+		# type: (str) -> sarge.Pipeline
 		printq(quiet, "Cmd: %s" % colored_verdict('R', cmd))
 		return cmd_runner(quiet)(cmd)
 	err = None
@@ -723,8 +727,9 @@ def create_flat_zip(input_files, output_file, quiet = False, level = 3):
 		printq(quiet, "7-Zip not found")
 		return False
 	def dot_path(f):
+		# type: (str) -> str
 		if f.startswith('.'):
-			return path
+			return f
 		return path.join('./', f)
 	dot_inputs = map(dot_path, input_files)
 	cmdline = "%s a -tzip -y -mx=%d %s %s" % (executable, level, output_file, ' '.join(dot_inputs))
@@ -1085,6 +1090,7 @@ def get_sources_in_problem(solutions = False, generators = False, checker = Fals
 	# type: (bool, bool, bool, bool) -> List[str]
 	sources = []
 	def check_and_add(source):
+		# type: (str) -> None
 		if path.isfile(source):
 			sources.append(source)
 	if validator:

@@ -3,6 +3,7 @@ from nsuolymp import *
 import argparse, sys
 
 def main(argv = None):
+	# type: (Optional[List[str]]) -> int
 	# handle cmd arguments
 	parser = argparse.ArgumentParser(description = "Compiles given source code files.")
 	parser.add_argument('sources', help = "list of source files to compile (may be empty, * to compile everything possible)", nargs = '*')

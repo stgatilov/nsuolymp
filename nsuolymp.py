@@ -69,7 +69,7 @@ def get_output_by_input(f):
 # returns list of tests for current problem, sorted by test index
 # CWD must be set to problem's directory
 def get_tests_inputs():
-	# type: () -> Iterable[str]
+	# type: () -> List[str]
 	all_t = glob.glob('tests/*.in')
 	def sort_key(name):
 		# type: (str) -> Tuple[int, Union[int, str]]

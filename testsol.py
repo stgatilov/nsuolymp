@@ -76,7 +76,7 @@ try:
 		raise StopError()
 
 	# find out solutions we have to test
-	solutions_list = []
+	solutions_list = []     # type: List[str]
 	
 	if test_all_solutions:
 		solutions_list = get_solutions()

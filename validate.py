@@ -3,6 +3,7 @@ from nsuolymp import *
 import argparse, sys
 
 def main(argv = None):
+	# type: (Optional[List[str]]) -> int
 	# handle cmd arguments
 	parser = argparse.ArgumentParser(description = "Validates tests in various ways.")
 	parser.add_argument('-q', '--quiet', help = "print only results (no intermediate messages)", action = "store_true")
@@ -32,6 +33,7 @@ def main(argv = None):
 	class ret:
 		code = 0
 	def on_error(code):
+		# type: (int) -> None
 		ret.code = ret.code or code
 		if cfg.stop:
 			raise StopError()

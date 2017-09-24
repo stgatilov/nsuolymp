@@ -3,6 +3,7 @@ from nsuolymp import *
 import argparse, sys
 
 def main(argv = None):
+	# type: (Optional[List[str]]) -> int
 	# handle cmd arguments
 	parser = argparse.ArgumentParser(description = "Run given solution executable with time/memory measurement and limits.")
 	parser.add_argument('solution', help = "name of solution/executable to run (enclose into double quotes if run with parameters)", nargs='+')
@@ -30,7 +31,7 @@ def main(argv = None):
 	res = controlled_run_solution(solution, tl, ml, args.interactive, args.quiet)
 
 	name = solution if type(solution) == str else ' '.join(solution)
-	data = [[name, [res]]]
+	data = [(name, [res])]
 	print_solutions_results(data)
 	
 	return 0 if res.verdict == 'A' else 1

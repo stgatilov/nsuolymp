@@ -7,7 +7,7 @@ import psutil							# for measuring CPU time and memory
 import colorama							# for colored console output (cross-platform)
 from os import path
 from collections import namedtuple
-from typing import Any, Optional, Callable, Union, Iterable, Pattern, List, Tuple, Dict
+from typing import Any, Optional, Callable, Union, Iterable, Pattern, List, Tuple, Dict, NamedTuple, IO, Iterator
 from nsuolymp_cfg import *	# load some user preferences
 
 # print all the given things if quiet = False
@@ -41,7 +41,8 @@ def read_file_contents(filepath):
 # returns a function that can run given CMD line
 # it supresses output to stdout/stderr if quiet is set
 def cmd_runner(quiet = False):
-	# type: (bool) -> Callable[[str], sarge.Pipeline]
+	# type: (bool) -> Callable[..., sarge.Pipeline]
+	# (callable type is not tight here)
 	return sarge.capture_both if quiet else sarge.run
 
 ################################# Test files ###################################
@@ -76,14 +77,14 @@ def get_tests_inputs():
 	return sorted(all_t, key = sort_key)
 
 # returns True when test passes user-specified filter (and False otherwise)
-# filter_str is user-specified string with comma/space-separated tokens
+# filter_str is user-specified string with comma/space-separated tokens (None = accept all)
 # each token can be one of the following kinds:
 #   min2  : matches exactly the test with given name 'min2'
 #   3-7   : matches tests with numeric names from 3 to 7 inclusive
 #   bad*  : matches any test whose name suits the glob 'bad*', e.g. 'bad', 'bad4', 'bad_luck'
 # Note that the filter applies to basename of the test (no directories, no extension)
 def if_test_passes_filter(test, filter_str):
-	# type: (str, str) -> bool
+	# type: (str, Optional[str]) -> bool
 	if filter_str is None:
 		return True
 	name = path.splitext(path.basename(test))[0]
@@ -476,20 +477,23 @@ if os.name == 'nt':
 	SEM_NOGPFAULTERRORBOX = 0x0002
 	ctypes.windll.kernel32.SetErrorMode(SEM_NOGPFAULTERRORBOX)
 
-RunResult = namedtuple('RunResult', 'verdict exit_code time memory')
+#RunResult = namedtuple('RunResult', 'verdict exit_code time memory')
+RunResult = NamedTuple('RunResult', [('verdict', str), ('exit_code', int), ('time', float), ('memory', float)])
 
 # if not in quiet mode, prints some info about several processes soon to be started
 # each argument (except "quiet") is a list with one element per process
 def proclaim_process_runs(popen_args, time_limits, memory_limits, quiet = False):
+	# type: (List[Union[str, List[str]]], List[Optional[float]], List[Optional[float]], bool) -> None
 	if quiet:
 		return
 	k = len(popen_args)
 	for i in range(k):
 		ml_str = tl_str = None
-		if time_limits[i] is not None:
-			tl_str = "%0.1lf" % time_limits[i]
-		if memory_limits[i] is not None:
-			ml_str = "%0.1lf" % memory_limits[i]
+		tl, ml = time_limits[i], memory_limits[i]
+		if tl is not None:
+			tl_str = "%0.1lf" % tl
+		if ml is not None:
+			ml_str = "%0.1lf" % ml
 		print("{0}: Starting: {1}    [TL = {2}, ML = {3}]".format(i, str(popen_args[i]), tl_str, ml_str))
 
 # controls execution of several processes just started via psutil.Popen (until all of them terminate)
@@ -505,21 +509,25 @@ def proclaim_process_runs(popen_args, time_limits, memory_limits, quiet = False)
 # if deadpipe_guard is set, then all remaining processes will be terminated (with 'K' verdict) if they all seem to wait 
 # this happens if idle time elapsed since last process termination is greater than deadpipe_guard for all alive processes
 def control_processes_execution(processes, time_limits, memory_limits, deadpipe_guard = None, quiet = False):
+	# type: (List[psutil.Process], List[Optional[float]], List[Optional[float]], Optional[float], bool) -> List[RunResult]
 	k = len(processes)
-	verdicts = [None] * k
-	exit_codes = [None] * k
+	verdicts = [None] * k       # type: List[Optional[str]]
+	exit_codes = [None] * k     # type: List[Optional[int]]
 	max_cpu_time = [0.0] * k
 	max_memory = [0.0] * k
 
 	def handle_process_termination(proc):
+		# type: (psutil.Process) -> None
 		i = processes.index(proc)
 		if exit_codes[i] is not None:
 			return # already terminated earlier
-		exit_codes[i] = processes[i].returncode
+		ec = exit_codes[i] = processes[i].returncode
+		assert(ec is not None)
+		ver = verdicts[i]
 		printq(quiet, "%d: %s (err = %d, mem = %s MB, time = %s sec)" % (
-			i, 
-			"Finished" if verdicts[i] is None else get_verdict_full_name(verdicts[i]),
-			exit_codes[i],
+			i,
+			"Finished" if ver is None else get_verdict_full_name(ver),
+			ec,
 			color_highlight("%0.1f" % max_memory[i]),
 			color_highlight("%0.2f" % max_cpu_time[i])
 		))
@@ -537,20 +545,21 @@ def control_processes_execution(processes, time_limits, memory_limits, deadpipe_
 		except psutil.TimeoutExpired:
 			for i in range(k):
 				process = processes[i]
+				tl, ml = time_limits[i], memory_limits[i]
 				if not process.is_running():
 					continue
 				try:
 					max_cpu_time[i] = max(max_cpu_time[i], process.cpu_times().user)
 					max_memory[i] = max(max_memory[i], process.memory_info().rss / (2**20))
-					if time_limits[i] is not None and max_cpu_time[i] > time_limits[i]:
+					if tl is not None and max_cpu_time[i] > tl:
 						verdicts[i] = 'T'
 						process.terminate()
 						continue
-					if memory_limits[i] is not None and max_memory[i] > memory_limits[i]:
+					if ml is not None and max_memory[i] > ml:
 						verdicts[i] = 'M'
 						process.terminate()
 						continue
-					if time_limits[i] is not None and time.time() - start_real_time > (time_limits[i] * 3 + 1):
+					if tl is not None and time.time() - start_real_time > (tl * 3 + 1):
 						verdicts[i] = 'D'
 						process.terminate()
 						continue
@@ -563,7 +572,7 @@ def control_processes_execution(processes, time_limits, memory_limits, deadpipe_
 					last_alive_count = len(alive)
 					last_idle_time = idle_time[:]
 				# alive processes with very small idle time after last process termination:
-				still_working = list(filter(lambda i: processes[i].is_running() and idle_time[i] - last_idle_time[i] < deadpipe_guard, range(k)))
+				still_working = list(filter(lambda i: processes[i].is_running() and idle_time[i] - last_idle_time[i] < deadpipe_guard, range(k))) # type: ignore
 				if len(still_working) == 0:
 					for i in range(k):
 						if processes[i].is_running():
@@ -578,7 +587,7 @@ def control_processes_execution(processes, time_limits, memory_limits, deadpipe_
 		except psutil.AccessDenied:		# perhaps OSX-specific
 			printq(quiet, "Access denied error (perhaps try sudo/admin)")
 
-	res = [RunResult(verdicts[i], exit_codes[i], max_cpu_time[i], max_memory[i]) for i in range(k)]
+	res = [RunResult(verdicts[i], exit_codes[i], max_cpu_time[i], max_memory[i]) for i in range(k)] # type: ignore
 	return res
 
 # runs a solution by name (either an executable file or java class)
@@ -586,9 +595,10 @@ def control_processes_execution(processes, time_limits, memory_limits, deadpipe_
 # parameters and results as in controlled_run
 # if interactive = True, then solution is run connected to interactor
 def controlled_run_solution(solution, time_limit, memory_limit, interactive, quiet = False):
+	# type: (Union[str, List[str]], Optional[float], Optional[float], bool, bool) -> RunResult
 	corrected_memory_limit = memory_limit
-	if type(solution) != str:
-		popen_args = solution
+	if not isinstance(solution, str):
+		popen_args = solution       # type: Union[str, List[str]]
 	elif if_exe_exists(solution):
 		solution_path = solution if os.name == 'nt' else path.join('./', solution)
 		popen_args = solution_path
@@ -606,8 +616,8 @@ def controlled_run_solution(solution, time_limit, memory_limit, interactive, qui
 		interactor_name = 'interactor'
 		interactor_args = [interactor_name if os.name == 'nt' else path.join('./', interactor_name), 'input.txt', 'output.txt']
 		args_list = [interactor_args, popen_args]
-		TLs = [time_limit * 2 + 5, time_limit] if time_limit is not None else [None, None]
-		MLs = [memory_limit + 256, corrected_memory_limit] if memory_limit is not None else [None, None]
+		TLs = [time_limit * 2 + 5, time_limit] if time_limit is not None else [None, None]                  # type: List[Optional[float]]
+		MLs = [memory_limit + 256, corrected_memory_limit] if memory_limit is not None else [None, None]    # type: List[Optional[float]]
 
 		proclaim_process_runs(args_list, TLs, MLs, quiet)
 		process_inter = psutil.Popen(interactor_args, stdin = subprocess.PIPE, stdout = subprocess.PIPE)
@@ -641,6 +651,7 @@ def controlled_run_solution(solution, time_limit, memory_limit, interactive, qui
 # note that it works a bit different from standard commands fc/diff
 # if any of the files is not present, returns false
 def is_file_diff_empty(ap, bp):
+	# type: (str, str) -> bool
 	try:
 		with open(ap, "rb") as af:
 			with open(bp, "rb") as bf:
@@ -652,6 +663,7 @@ def is_file_diff_empty(ap, bp):
 
 # given return code of checker process, returns verdict for solution
 def get_verdict_for_checker_code(errcode):
+	# type: (int) -> str
 	if errcode == 0:
 		return 'A'
 	if errcode == 1:
@@ -672,6 +684,7 @@ def get_verdict_for_checker_code(errcode):
 #   'answer.txt' - jury's output data
 #   'output.txt' - contestant's output data
 def run_checker(quiet = False):
+	# type: (bool) -> str
 	if if_exe_exists('check'):
 		errcode = cmd_runner(quiet)('./check input.txt output.txt answer.txt').returncode
 	else:
@@ -684,6 +697,7 @@ def run_checker(quiet = False):
 # usually uses a version available in PATH (7za / 7z)
 # returns path to 7z or None if it is not found
 def find_7zip():
+	# type: () -> Optional[str]
 	if if_command_exists('7za'):
 		return '7za'
 	if if_command_exists('7z'):
@@ -701,6 +715,7 @@ def find_7zip():
 # note: may break for lengthy file list due to OS limit on cmd length (8K-32K)
 # returns True on success, False on fail
 def create_flat_zip(input_files, output_file, quiet = False, level = 3):
+	# type: (List[str], str, bool, int) -> bool
 	if path.isfile(output_file):
 		os.remove(output_file)
 	executable = find_7zip()
@@ -721,9 +736,10 @@ def create_flat_zip(input_files, output_file, quiet = False, level = 3):
 # common configuration settings for everything
 class Config:
 	def __init__(self, quiet = False, stop = False, tl = None, ml = None, cl_flags = None, cl_order = None):
-		# time limit on solution's cpu time (real, in seconds, may be None)
+		# type: (bool, bool, Optional[float], Optional[float], Optional[Dict[str, str]], Optional[Dict[str, List[str]]]) -> None
+		# time limit on solution's cpu time (in seconds, may be None)
 		self.tl = tl
-		# memory limit on solution's memory (real, in megabytes, may be None)
+		# memory limit on solution's memory (in megabytes, may be None)
 		self.ml = ml
 		# whether print output is suppressed during operation
 		self.quiet = quiet
@@ -749,6 +765,7 @@ class Config:
 #   it is overwritten with the output of solution (unless it was terminated prematurely)
 # if interactor is present, solution is run with it
 def check_solution_on_test(cfg, solution, input_file, gen_output = False):
+	# type: (Config, str, str, bool) -> RunResult
 	assert(path.dirname(path.abspath(solution)) == path.abspath(os.getcwd()))
 	copyfile(input_file, 'input.txt')
 	interactive = if_exe_exists('interactor')
@@ -776,6 +793,7 @@ def check_solution_on_test(cfg, solution, input_file, gen_output = False):
 # if cfg.stop=True, then shorter string is returned (up to first error inclusive)
 # see check_solution_on_test for explanation of gen_output = True case
 def check_solution(cfg, solution, tests_filter = None, gen_output = False):
+	# type: (Config, str, Optional[str], bool) -> List[RunResult]
 	res_list = []
 	for f in get_tests_inputs():
 		if not if_test_passes_filter(f, tests_filter):
@@ -792,6 +810,7 @@ def check_solution(cfg, solution, tests_filter = None, gen_output = False):
 # run_results must be an array of RunResult tuples
 # it represents single row in table of results (returned as list of colored strings)
 def format_solution_result(solution_name, run_results):
+	# type: (str, List[RunResult]) -> List[str]
 	total_verdict = 'A'
 	test_index = len(run_results) - 1
 	for i,res in enumerate(run_results):
@@ -815,14 +834,15 @@ def format_solution_result(solution_name, run_results):
 
 # run given solutions on given tests
 # solutions: list of solutions to check (if None, all solutions are found)
-# tests: list of tests to check (if None, then all tests are used)
+# tests: filter of tests to check (if None, then all tests are used)
 # returns list of pairs:
 #   first - name of solution
 #   second - list of RunResult tuples
 def check_many_solutions(cfg, solutions = None, tests = None):
+	# type: (Config, Optional[List[str]], Optional[str]) -> List[Tuple[str, List[RunResult]]]
 	if solutions is None:
 		solutions = get_solutions()
-		printq(cfg,quiet, "Solutions: %s" % str(solutions))
+		printq(cfg.quiet, "Solutions: %s" % str(solutions))
 	res_table = []
 	for sol in solutions:
 		res = check_solution(cfg, sol, tests)
@@ -834,21 +854,24 @@ def check_many_solutions(cfg, solutions = None, tests = None):
 
 # pretty-print the results returned by check_all_solutions
 def print_solutions_results(data):
+	# type: (List[Tuple[str, List[RunResult]]]) -> None
 	text_table = [format_solution_result(*elem) for elem in data]
 	print(draw_table_colored(text_table))
 
 # converts EOLN style of given byte string to system's default
 # note: data must be read and written to/from file in binary mode
 def convert_eoln(contents):
+	# type: (bytes) -> bytes
 	return contents.replace(b'\r\n', b'\n').replace(b'\r', b'\n').replace(b'\n', os.linesep.encode())
 
 # run validator on given test (i.e. input_file)
 # returns True on success, False on validation error, None if something is missing
 def validate_test(input_file, quiet = False):
+	# type: (str, bool) -> Optional[bool]
 	if not if_exe_exists('validator') or not path.isfile(input_file):
 		return None
 	printq(quiet, './validator < ' + input_file)
-	with open(input_file, 'rb') as f:
+	with open(input_file, 'rb') as f:   # type: IO[Any]
 		if validator_eoln_relaxed:
 			data = f.read()
 			data = convert_eoln(data)
@@ -862,6 +885,7 @@ def validate_test(input_file, quiet = False):
 # returns a list of relative paths to all the failed test input files
 # if validator is missing, some string is returned
 def validate_all_tests(quiet = False):
+	# type: (bool) -> Union[List[str], str]
 	incorrect = []
 	for f in get_tests_inputs():
 		ok = validate_test(f, quiet)
@@ -873,7 +897,8 @@ def validate_all_tests(quiet = False):
 
 # pretty-print the results returned by validate_all_tests
 def print_validate_results(results):
-	if type(results) == str:
+	# type: (Union[List[str], str]) -> None
+	if isinstance(results, str):
 		print(colored_verdict('T', "Validator not found!"))
 	elif len(results) == 0:
 		print(colored_verdict('A', "All tests are correct"))
@@ -885,6 +910,7 @@ def print_validate_results(results):
 # checks if all the tests are in form tests\[1.in, 2.in, 3.in, ..., {k}.in]
 # returns list of error messages (empty list if everything is OK)
 def validate_tests_indices():
+	# type: () -> List[str]
 	tests = get_tests_inputs()
 	non_numeric = []
 	numeric = []
@@ -912,6 +938,7 @@ def validate_tests_indices():
 
 # pretty-print results of validate_tests_indices
 def print_validate_indices_results(results):
+	# type: (List[str]) -> None
 	if len(results) == 0:
 		print(colored_verdict('A', 'Tests names are correct'))
 	else:
@@ -923,7 +950,9 @@ def print_validate_indices_results(results):
 #      or some string if failed to extract samples from the problem statement
 # in case of interactive problem, returns empty string (which indicates no error)
 def check_samples(statements_name = None, quiet = False):
+	# type: (Optional[str], bool) -> Union[List[str], str]
 	def is_sample_bad(path_in, path_out, sample, quiet):
+		# type: (str, str, Tuple[bytes, bytes], bool) -> bool
 		if not (path.isfile(path_in) and path.isfile(path_out)):
 			printq(quiet, colored_verdict('R', "One of sample files is missing: %s and %s" % (path_in, path_out)))
 			return True
@@ -958,6 +987,7 @@ def check_samples(statements_name = None, quiet = False):
 
 # pretty-print results of check_samples call
 def print_check_samples_results(results):
+	# type: (Union[List[str], str]) -> None
 	if results == "not found":
 		print(colored_verdict('T', "Failed to extract samples from problem statement!"))
 	elif results == "":
@@ -970,6 +1000,7 @@ def print_check_samples_results(results):
 # finds tests (input files) with missing output files
 # returns them as a list (or "" if check is not applicable)
 def check_output_files():
+	# type: () -> Union[List[str], str]
 	if if_exe_exists('interactor'):
 		return ""  # quietly omit the check
 	output_files = list(map(get_output_by_input, get_tests_inputs()))
@@ -978,6 +1009,7 @@ def check_output_files():
 
 #pretty-print results of check_output_files call
 def print_check_output_files(results):
+	# type: (Union[List[str], str]) -> None
 	if results == "":
 		print(colored_verdict('R', "Output files not checked for interactive problem"))
 	elif len(results) == 0:
@@ -993,6 +1025,7 @@ def print_check_output_files(results):
 # first solution is used to generate answer for a test, others are compared to it
 # validator is used if available (and not used otherwise)
 def stress_test_solutions(cfg, generator_args, solutions):
+	# type: (Config, Union[List[str], str], List[str]) -> Iterator[int]
 	if not isinstance(generator_args, list):
 		generator_args = [generator_args]
 	test_name = 'stress_test.in'
@@ -1025,12 +1058,14 @@ def stress_test_solutions(cfg, generator_args, solutions):
 # language is guessed from extension
 # returns True on success, False on error
 def compile_source(source, cfg):
+	# type: (str, Config) -> bool
 	return compile_source_impl(source, None, cfg.cl_flags, cfg.cl_order, cfg.quiet)
 
 # compiles given list of source files
 # returns two lists in a tuple: list of successfully compiled sources, and list of unsucessfully compiled ones
 # if cfg.stop=True, then lists may be incomplete (they include all sources up to first error inclusive)
 def compile_sources(sources, cfg):
+	# type: (List[str], Config) -> Tuple[List[str], List[str]]
 	successes = []
 	fails = []
 	for source in sources:
@@ -1041,12 +1076,13 @@ def compile_sources(sources, cfg):
 			fails.append(source)
 			if cfg.stop:
 				break
-	return [successes, fails]
+	return (successes, fails)
 
 # returns which source files in the specified groups are present in the current problem
 # flags solutions, generators, checker, validator tells if such a group should be returned
 # return list of filenames, which can be passed to compile_sources
 def get_sources_in_problem(solutions = False, generators = False, checker = False, validator = False):
+	# type: (bool, bool, bool, bool) -> List[str]
 	sources = []
 	def check_and_add(source):
 		if path.isfile(source):
@@ -1062,8 +1098,9 @@ def get_sources_in_problem(solutions = False, generators = False, checker = Fals
 		sources.extend(get_solution_sources())
 	return sources
 
-# pretty-print results returned by compile_in_problem
+# pretty-print results returned by compile_sources
 def print_compile_results(results):
+	# type: (Tuple[List[str], List[str]]) -> None
 	successes = results[0]
 	fails = results[1]
 	sources = "{none}"

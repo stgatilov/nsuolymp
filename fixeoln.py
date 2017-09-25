@@ -15,7 +15,9 @@ def main(argv = None):
 	if args.windows:
 		style = "windows"
 
-	files_list = get_tests_inputs() + list(map(get_output_by_input, get_tests_inputs()))
+	input_list = get_tests_inputs()
+	output_list = list(filter(path.isfile, map(get_output_by_input, get_tests_inputs())))
+	files_list = input_list + output_list
 	for fname in files_list:
 		with open(fname, 'rb') as f:
 			data = f.read()

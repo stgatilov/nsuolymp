@@ -404,8 +404,10 @@ def if_command_exists(f):
 def guess_source_language(source):
 	# type: (str) -> Optional[str]
 	(name, ext) = path.splitext(source)
-	if ext in ['.cpp', '.c', '.c++', '.cxx']:
-		return 'cpp'		# gcc/msvc is determined later
+	if ext in ['.c']:
+		return 'c'			# gcc/msvc is determined later
+	if ext in ['.cpp', '.c++', '.cxx']:
+		return 'cpp'		# g++/msvc is determined later
 	elif ext in ['.pas', '.dpr']:
 		return 'pas'		# fpc/dcc32 can be used...
 	elif ext in ['.java']:

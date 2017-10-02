@@ -6,13 +6,15 @@ default_compiler_flags = {
 	"fpc": "-O2",
 	"javac": "",
 	"cl": "/O2 /EHsc",
-	"g++": "-O2 --std=gnu++11",
+	"g++": "-O2 -std=gnu++11",
+	"gcc": "-O2 -std=c11",
 }
 
 # for each language, specify in which order to try compilers to build it
 # (useful e.g. for choosing between cl/g++ and fpc/dcc32 reliably)
 default_compiler_order = {
 	"cpp": ["cl", "g++"],
+	"c": ["cl", "gcc"],
 	"pas": ["dcc32", "fpc"],
 	"java": ["javac"],
 }

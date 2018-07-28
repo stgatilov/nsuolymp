@@ -29,7 +29,7 @@ class save_cwd():
 		# type: () -> None
 		self.cwd = os.getcwd();
 	def __exit__(self, type, value, traceback):
-		# type: (...) -> None
+		# type: (Any, Any, Any) -> None
 		os.chdir(self.cwd)
 
 # returns contents of file by given path (or None if it is not present)

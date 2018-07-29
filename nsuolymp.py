@@ -321,6 +321,8 @@ def extract_limits(text):
 # Note: CWD must be equal to the problem's directory
 def find_problem_statement(statements_name = None, problem_name = None):
 	# type: (Optional[str], Optional[str]) -> Optional[str]
+	if path.isfile('statement.tex'):
+		return 'statement.tex'      # support problem statement in problem dir, mainly for training contests
 	if statements_name is None:
 		statements_name = '_statements'
 	if problem_name is None:
@@ -340,7 +342,7 @@ def read_samples(statement_path):
 	if statement_text is None or statement_path is None:
 		return None
 	with save_cwd():
-		os.chdir(path.dirname(statement_path))
+		os.chdir(path.dirname(path.abspath(statement_path)))
 		os.chdir(os.pardir)
 		return extract_samples(statement_text)
 

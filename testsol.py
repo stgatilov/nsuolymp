@@ -85,7 +85,7 @@ try:
 			sol_noext = path.splitext(sol)[0]
 			if is_solution(sol_noext):
 				solutions_list.append(sol_noext)
-			else:	
+			else:
 				printq(cfg.quiet, colored_verdict('W', "Solution %s does not exist" % sol_noext))
 				if cfg.stop:
 					raise StopError()

@@ -126,16 +126,27 @@ def is_java_class(f):
 def has_java_task(f):
 	# type: (str) -> bool
 	return path.isdir(f) and path.isfile(path.join(f, 'Task.class'))
-	
+
+# returns whether there is python source file with given name
+def is_python_source(f):
+	# type: (str) -> bool
+	return path.isfile(f + '.py')
+
+# returns whether there is a file with given name in some interpreted language
+def is_interpretable(f):
+	# type: (str) -> bool
+	return is_python_source(f)
+
 # returns whether a given file/directory is a problem solution
 # f must be specified without extension
 # in case of c++/pas, it must be executable
 # in case of java, it is one of:
 #   class file with .class extension    (proper way)
 #   a directory with Task.class in it   (for old nsuts)
+# in case of python or similar, it must be the source file itself
 def is_solution(f):
 	# type: (str) -> bool
-	return if_exe_exists(f) or is_java_class(f) or has_java_task(f)
+	return if_exe_exists(f) or is_java_class(f) or has_java_task(f) or is_interpretable(f)
 
 # returns list of solutions for current problem
 # CWD must be set to problem's directory
@@ -610,8 +621,7 @@ def controlled_run_solution(solution, time_limit, memory_limit, interactive, qui
 	elif if_exe_exists(solution):
 		solution_path = solution if os.name == 'nt' else path.join('./', solution)
 		popen_args = solution_path
-	else:
-		assert(is_java_class(solution) or has_java_task(solution))
+	elif is_java_class(solution) or has_java_task(solution):
 		heap_size_key = '-Xmx1G' if memory_limit is None else '-Xmx%dM' % int(memory_limit)
 		corrected_memory_limit = None
 		popen_args = ['java', heap_size_key, '-Xms64M', '-Xss32M', '-Duser.country=US', '-Duser.language=en']
@@ -619,6 +629,11 @@ def controlled_run_solution(solution, time_limit, memory_limit, interactive, qui
 			popen_args += [path.splitext(solution)[0]]
 		elif has_java_task(solution):
 			popen_args += ['-cp', solution, 'Task']
+	elif is_interpretable(solution):
+		if is_python_source(solution):
+			popen_args = ['python', solution + '.py']
+	else:
+		raise Exception("don't know how to run %s" % solution)
 
 	if interactive:
 		interactor_name = 'interactor'

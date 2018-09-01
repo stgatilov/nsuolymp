@@ -440,7 +440,7 @@ def get_compile_cmd(source_local, compiler, compiler_flags):
 	if not if_command_exists(compiler):
 		return None
 	cmd = '%s %s %s' % (compiler, compiler_flags.get(compiler), source_local);
-	if compiler == 'g++':
+	if compiler == 'g++' or compiler == 'gcc':
 		cmd += ' -o %s' % path.splitext(source_local)[0]
 	return cmd
 

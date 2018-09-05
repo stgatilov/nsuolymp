@@ -752,7 +752,7 @@ def create_flat_zip(input_files, output_file, quiet = False, level = 3):
 		return path.join('./', f)
 	dot_inputs = map(dot_path, input_files)
 	cmdline = "%s a -tzip -y -mx=%d %s %s" % (executable, level, output_file, ' '.join(dot_inputs))
-	err = cmd_runner(quiet)(cmdline)
+	err = cmd_runner(quiet)(cmdline).returncode
 	return err == 0
 
 ##################################### Config ###################################

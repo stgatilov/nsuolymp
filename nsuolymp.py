@@ -1140,3 +1140,95 @@ def print_compile_results(results):
 	if len(fails) > 0:
 		sources = '[' + ', '.join(fails) + ']'
 		print(colored_verdict('W', "Failed to compile: " + sources))
+
+# data about simple generation script
+GenScriptLine = NamedTuple('GenScriptLine', [('generator', str), ('args', List[str]), ('test', int)])
+
+# parse the batch-like script with sequence of generator invocations
+# if script is ill-formed, then message string is returned
+def parse_generation_script(filename = 'gen.cmd'):
+	# type: (str) -> Union[List[GenScriptLine], str]
+	content = read_file_contents(filename)
+	if content is None:
+		return "Generator file %s not found" % filename
+	result = []
+	lines = content.split(b'\n')
+	ids = {}        # type: Dict[int, None]
+	for lb in lines:
+		l = str(lb.decode('ascii'))
+		tokens = l.split()
+		if len(tokens) == 0 or tokens[0] == 'rem':
+			continue
+		if len(tokens) < 2:
+			return "Too few tokens in line: %s" % l
+		genfn = tokens[0]
+		redirect = tokens[-1]
+		args = tokens[1:-1]
+		if not redirect.startswith('>') and len(args) > 0 and args[-1] == '>':
+			redirect = args[-1] + redirect
+			args = args[0:-1]
+		if not redirect.startswith('>'):
+			return "Last argument must be redirection: %s" % redirect
+		idx = get_test_index(redirect[1:])
+		if get_test_input(idx) != redirect[1:]:
+			return "Filename is incorrect: %s != %s" % (get_test_input(idx), redirect[1:])
+		if '.' in genfn:
+			return "Generator must be specified without extension: %s" % genfn
+		if genfn not in [path.splitext(f)[0] for f in get_generator_sources()]:
+			return "Cannot find source file for generator %s" % genfn
+		if idx in ids:
+			return "Test with index %d is produced twice" % idx
+		ids[idx] = None
+		result.append(GenScriptLine(genfn, args, idx))
+	return result
+
+# pretty-print results of parse_simple_generation_script
+def print_parse_generation_script(results):
+	# type: (Union[List[GenScriptLine], str]) -> None
+	if isinstance(results, str):
+		print(colored_verdict('W', 'Gen-script parse error: %s' % results))
+	else:
+		print(colored_verdict('A', 'Generator script is well-formed (%d tests)' % len(results)))
+
+# executes one line of simple generation script (aka "gen_random 10 50 >tests/17.in")
+def execute_generation_line(cfg, line):
+	# type: (Config, GenScriptLine) -> bool
+	exe = line.generator if os.name == 'nt' else path.join('./', line.generator)
+	testfn = get_test_input(line.test)
+	old_data = read_file_contents(testfn)
+	cmd = '%s %s >%s' % (exe, ' '.join(line.args), testfn)
+	printq(cfg.quiet, "Cmd: %s" % colored_verdict('R', cmd))
+	err = (sarge.capture_stderr if cfg.quiet else sarge.run)(cmd).returncode
+	if err != 0:
+		printq(cfg.quiet, colored_verdict('W', 'Failed to execute generator line'))
+		return False
+	new_data = read_file_contents(testfn)
+	if old_data is not None and old_data != new_data:
+		printq(cfg.quiet, colored_verdict('M', 'Contents of %s has changed' % testfn))
+		return False
+	return True
+
+# executes the whole simple generation script with all its lines
+# returns pair of list of successfully generated tests, and list of tests failed to generate
+# if cfg.stop=True, then lists may be incomplete (they include all tests up to first error inclusive)
+def execute_generation_script(cfg, script):
+	# type: (Config, List[GenScriptLine]) -> Tuple[List[int], List[int]]
+	successes = []      # type: List[int]
+	fails = []          # type: List[int]
+	for line in script:
+		res = execute_generation_line(cfg, line)
+		(successes if res else fails).append(line.test)
+		if not res and cfg.stop:
+			break
+	return (successes, fails)
+
+# pretty-print results of execute_generation_script
+def print_execute_generation_script(results):
+	# type: (Tuple[List[int], List[int]]) -> None
+	successes = results[0]
+	fails = results[1]
+	tests = '[' + ', '.join([str(i) for i in successes]) + ']'
+	print(colored_verdict('A', "Successfully generated: " + tests))
+	if len(fails) > 0:
+		tests = '[' + ', '.join([str(i) for i in fails]) + ']'
+		print(colored_verdict('W', "Failed to generate: " + tests))

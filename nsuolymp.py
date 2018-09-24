@@ -1172,6 +1172,8 @@ def parse_generation_script(filename = 'gen.cmd'):
 		idx = get_test_index(redirect[1:])
 		if get_test_input(idx) != redirect[1:]:
 			return "Filename is incorrect: %s != %s" % (get_test_input(idx), redirect[1:])
+		if genfn.startswith('./'):
+			genfn = genfn[2:]
 		if '.' in genfn:
 			return "Generator must be specified without extension: %s" % genfn
 		if genfn not in [path.splitext(f)[0] for f in get_generator_sources()]:

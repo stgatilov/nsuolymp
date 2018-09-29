@@ -19,6 +19,22 @@ default_compiler_order = {
 	"java": ["javac"],
 }
 
+# NSUTs credentials and contest options
+# required to submits solutions
+nsuts_options = {
+        "nsuts": "http://olympic.nsu.ru/nsuts-new",
+
+	"email": "user@name.ru",
+	"password": "securepassword",
+	"olympiad_id": 58,
+	"tour_id": 11186,
+
+        "compiler": {
+            "cpp": "vcc2015",
+            "java": "java8u101x32"
+        }
+}
+
 # if set to true, then endlines are converted on-the-fly to local system defaults before being passed to validator
 # note: useful when preparing contest on OS different from the one used on contest
 validator_eoln_relaxed = False

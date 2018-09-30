@@ -16,6 +16,13 @@ def printq(quiet, *args):
 	if not quiet:
 		print(*args)
 
+# wrapper for getting size of file (-1 if file is not present)
+def getfilesize(src):
+	# type: (str) -> int
+	if path.isfile(src):
+		return path.getsize(src)
+	return -1
+		
 # wrapper for copying files
 def copyfile(src, dst):
 	# type: (str, str) -> None
@@ -663,8 +670,10 @@ def controlled_run_solution(solution, time_limit, memory_limit, interactive, qui
 		return sol_res._replace(verdict = exitcode_verdict)
 	else:
 		proclaim_process_runs([popen_args], [time_limit], [corrected_memory_limit], quiet)
-		process = psutil.Popen(popen_args)
-		res = control_processes_execution([process], [time_limit], [corrected_memory_limit], None, quiet)
+		with open("input.txt", "rb") as fin:
+			with open("_stdout_", "wb") as fout:
+				process = psutil.Popen(popen_args, stdin = fin, stdout = fout)
+				res = control_processes_execution([process], [time_limit], [corrected_memory_limit], None, quiet)
 		return res[0]
 
 ############################## Diffs and checkers ##############################
@@ -792,10 +801,19 @@ def check_solution_on_test(cfg, solution, input_file, gen_output = False):
 	# type: (Config, str, str, bool) -> RunResult
 	assert(path.dirname(path.abspath(solution)) == path.abspath(os.getcwd()))
 	copyfile(input_file, 'input.txt')
+	if path.isfile('output.txt'):
+		os.remove('output.txt')
 	interactive = if_exe_exists('interactor')
+
 	res = controlled_run_solution(solution, cfg.tl, cfg.ml, interactive, cfg.quiet)
+
+	if getfilesize('_stdout_') == 0:
+		os.remove('_stdout_')
+	if getfilesize('output.txt') <= 0 and getfilesize('_stdout_') > 0:
+		copyfile('_stdout_', 'output.txt')
 	if gen_output:
 		copyfile('output.txt', 'answer.txt')
+
 	if not interactive:
 		if not gen_output:
 			if path.isfile(get_output_by_input(input_file)):

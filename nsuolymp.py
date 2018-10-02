@@ -310,11 +310,11 @@ def extract_samples(text):
 		all_samples.append((test_input, test_output))
 	return all_samples
 
-# finds time and memory limits in a given problem statement (in LaTeX with olymp.sty)
-# returns pair of (tl, ml), where: tl is in seconds, ml is in MB
+# parses header in a given problem statement (in LaTeX with olymp.sty)
+# returns list of strings which are parameters of \begin{problem}
 # returns None on fail
-def extract_limits(text):
-	# type: (Optional[bytes]) -> Optional[Tuple[float, float]]
+def extract_header(text):
+	# type: (Optional[bytes]) -> Optional[List[bytes]]
 	if text is None:
 		return None
 	text = re.sub(b'%(.*?)\n', b'', text) # note: false positives with percent as \%
@@ -323,15 +323,40 @@ def extract_limits(text):
 	problem_re += br'\s* \{ (.*?) \}' * 5
 	match = re.search(problem_re, text)
 	if match:
-		tl_txt = match.group(4)
-		ml_txt = match.group(5)
-		try:
-			tl = float(tl_txt.split()[0])
-			ml = float(ml_txt.split()[0])
-		except ValueError:
-			return None
-		return (tl, ml)
+		return [match.group(k) for k in range(1, 6)]
 	return None
+
+# finds time and memory limits in a given problem statement (in LaTeX with olymp.sty)
+# returns pair of (tl, ml), where: tl is in seconds, ml is in MB
+# returns None on fail
+def extract_limits(text):
+	# type: (Optional[bytes]) -> Optional[Tuple[float, float]]
+	args = extract_header(text)
+	if args is None:
+		return None
+	tl_txt = args[3]
+	ml_txt = args[4]
+	try:
+		tl = float(tl_txt.split()[0])
+		ml = float(ml_txt.split()[0])
+	except ValueError:
+		return None
+	return (tl, ml)
+
+# returns filenames as written in the problem statement
+# returns input.txt / output.txt in case of any error
+def extract_filenames(text):
+	# type: (Optional[bytes]) -> Tuple[str, str]
+	args = extract_header(text)
+	in_fn = 'input.txt'
+	out_fn = 'output.txt'
+	if args is not None:
+		fname_re = br'^(\w|\.)+$'
+		if re.match(fname_re, args[1]):
+			in_fn = args[1].decode('ascii')
+		if re.match(fname_re, args[2]):
+			out_fn = args[2].decode('ascii')
+	return (in_fn, out_fn)
 
 # returns relative path to the file with LaTeX problem statement (or None if not found)
 # statements_name is the name of the directory with statements
@@ -371,6 +396,12 @@ def read_samples(statement_path):
 def read_limits(statement_path):
 	# type: (Optional[str]) -> Optional[Tuple[float, float]]
 	return extract_limits(read_file_contents(statement_path))
+
+# returns pair of input/output filenames specified in problem
+# by default, it is ('input.txt', 'output.txt')
+def read_filenames(statement_path = None):
+	# type: (Optional[str]) -> Tuple[str, str]
+	return extract_filenames(read_file_contents(statement_path or find_problem_statement()))
 
 ############################## Compiling sources ###############################
 

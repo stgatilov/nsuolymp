@@ -365,9 +365,9 @@ def extract_filenames(text):
 	if args is not None:
 		fname_re = br'^(\w|\.)+$'
 		if re.match(fname_re, args[1]):
-			in_fn = args[1].decode('ascii')
+			in_fn = str(args[1].decode('ascii'))
 		if re.match(fname_re, args[2]):
-			out_fn = args[2].decode('ascii')
+			out_fn = str(args[2].decode('ascii'))
 	return (in_fn, out_fn)
 
 # returns relative path to the file with LaTeX problem statement (or None if not found)

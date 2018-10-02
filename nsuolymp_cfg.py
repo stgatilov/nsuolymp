@@ -19,6 +19,11 @@ default_compiler_order = {
 	"java": ["javac"],
 }
 
+# When set to true:
+# 1. input file is additionally passed to stdin
+# 2. stdout is redirected to temp file, and it is taken instead of file if file is absent/empty
+enable_stdinout_redirection = True
+
 # if set to true, then endlines are converted on-the-fly to local system defaults before being passed to validator
 # note: useful when preparing contest on OS different from the one used on contest
 validator_eoln_relaxed = False

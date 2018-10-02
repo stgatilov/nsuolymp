@@ -836,7 +836,11 @@ def check_solution_on_test(cfg, solution, input_file, gen_output = False):
 		os.remove('output.txt')
 	interactive = if_exe_exists('interactor')
 
+	(in_fn, out_fn) = read_filenames()
+	copyfile('input.txt', in_fn)
 	res = controlled_run_solution(solution, cfg.tl, cfg.ml, interactive, cfg.quiet)
+	if path.isfile(out_fn):
+		copyfile(out_fn, 'output.txt')
 
 	if getfilesize('_stdout_') == 0:
 		os.remove('_stdout_')

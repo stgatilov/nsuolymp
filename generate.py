@@ -67,7 +67,7 @@ def main(argv = None):
 		# generate output files by running the solution
 		if args.solution is not None:
 			test_results = (args.solution, check_solution(cfg, args.solution, ','.join(str(i) for i in test_indices), True))
-			if not all(res.verdict == 'A' for res in test_results[1]):
+			if not all(res.verdict in ['A', '.'] for res in test_results[1]):
 				on_error(5)
 
 	except (StopError):

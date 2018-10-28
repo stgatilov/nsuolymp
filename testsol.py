@@ -43,15 +43,8 @@ def main(argv = None):
 	compile_results = test_results = stress_results = None
 
 	# helper for return code & stop-on-error
-	class StopError(Exception):
-		pass
-	class ret:
-		code = 0
-	def on_error(code, force = False):
-		# type: (int, bool) -> None
-		ret.code = ret.code or code
-		if cfg.stop or force:
-			raise StopError()
+	err = [0]
+	on_error = error_handling_helper(cfg, err)
 
 	try:
 		# find out what should we compile
@@ -121,7 +114,7 @@ def main(argv = None):
 	if stress_results is not None:
 		print(colored_verdict('W', "Stopped on a problematic test generated with seed = " + str(stress_results)))
 
-	return ret.code
+	return err[0]
 
 
 if __name__ == "__main__":

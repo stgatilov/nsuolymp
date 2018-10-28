@@ -1302,3 +1302,17 @@ def print_execute_generation_script(results):
 	if len(fails) > 0:
 		tests = '[' + ', '.join([str(i) for i in fails]) + ']'
 		print(colored_verdict('W', "Failed to generate: " + tests))
+
+################################### Script helpers #############################
+
+# helper for return code & stop-on-error
+class StopError(Exception):
+	pass
+def error_handling_helper(cfg, err):
+	# type: (Config, List[int]) -> Callable[..., None]
+	def on_error(code, force = False):
+		# type: (int, bool) -> None
+		err[0] = err[0] or code
+		if cfg.stop or force:
+			raise StopError()
+	return on_error

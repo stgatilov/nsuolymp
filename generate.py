@@ -44,9 +44,10 @@ def main(argv = None):
 			add_source_to_compile_list(cfg, gen, compile_list, args.compile)
 		if args.solution is not None:
 			args.solution = add_source_to_compile_list(cfg, args.solution, compile_list, args.compile)
-		if args.validate:
-			for src in get_sources_in_problem(validator = True, checker = True):
+			for src in ['check', 'interactor']:
 				add_source_to_compile_list(cfg, src, compile_list, args.compile)
+		if args.validate:
+			add_source_to_compile_list(cfg, 'validator', compile_list, args.compile)
 		compile_results = compile_sources(compile_list, cfg)
 		if len(compile_results[1]) > 0:
 			on_error(2)

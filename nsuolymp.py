@@ -16,6 +16,13 @@ def printq(quiet, *args):
 	if not quiet:
 		print(*args)
 
+# wrapper for getting size of file (-1 if file is not present)
+def getfilesize(src):
+	# type: (str) -> int
+	if path.isfile(src):
+		return path.getsize(src)
+	return -1
+		
 # wrapper for copying files
 def copyfile(src, dst):
 	# type: (str, str) -> None
@@ -31,6 +38,18 @@ class save_cwd():
 	def __exit__(self, type, value, traceback):
 		# type: (Any, Any, Any) -> None
 		os.chdir(self.cwd)
+
+# like contextlib.nullcontext in Python 3.7 (better typing?)
+class null_context:
+	def __init__(self, arg = None):
+		# type: (Any) -> None
+		self.arg = arg
+	def __enter__(self):
+		# type: () -> Any
+		return self.arg
+	def __exit__(self, *exc_info):
+		# type: (Any) -> None
+		pass
 
 # returns contents of file by given path (or None if it is not present)
 def read_file_contents(filepath):
@@ -303,11 +322,11 @@ def extract_samples(text):
 		all_samples.append((test_input, test_output))
 	return all_samples
 
-# finds time and memory limits in a given problem statement (in LaTeX with olymp.sty)
-# returns pair of (tl, ml), where: tl is in seconds, ml is in MB
+# parses header in a given problem statement (in LaTeX with olymp.sty)
+# returns list of strings which are parameters of \begin{problem}
 # returns None on fail
-def extract_limits(text):
-	# type: (Optional[bytes]) -> Optional[Tuple[float, float]]
+def extract_header(text):
+	# type: (Optional[bytes]) -> Optional[List[bytes]]
 	if text is None:
 		return None
 	text = re.sub(b'%(.*?)\n', b'', text) # note: false positives with percent as \%
@@ -316,15 +335,40 @@ def extract_limits(text):
 	problem_re += br'\s* \{ (.*?) \}' * 5
 	match = re.search(problem_re, text)
 	if match:
-		tl_txt = match.group(4)
-		ml_txt = match.group(5)
-		try:
-			tl = float(tl_txt.split()[0])
-			ml = float(ml_txt.split()[0])
-		except ValueError:
-			return None
-		return (tl, ml)
+		return [match.group(k) for k in range(1, 6)]
 	return None
+
+# finds time and memory limits in a given problem statement (in LaTeX with olymp.sty)
+# returns pair of (tl, ml), where: tl is in seconds, ml is in MB
+# returns None on fail
+def extract_limits(text):
+	# type: (Optional[bytes]) -> Optional[Tuple[float, float]]
+	args = extract_header(text)
+	if args is None:
+		return None
+	tl_txt = args[3]
+	ml_txt = args[4]
+	try:
+		tl = float(tl_txt.split()[0])
+		ml = float(ml_txt.split()[0])
+	except ValueError:
+		return None
+	return (tl, ml)
+
+# returns filenames as written in the problem statement
+# returns input.txt / output.txt in case of any error
+def extract_filenames(text):
+	# type: (Optional[bytes]) -> Tuple[str, str]
+	args = extract_header(text)
+	in_fn = 'input.txt'
+	out_fn = 'output.txt'
+	if args is not None:
+		fname_re = br'^(\w|\.)+$'
+		if re.match(fname_re, args[1]):
+			in_fn = str(args[1].decode('ascii'))
+		if re.match(fname_re, args[2]):
+			out_fn = str(args[2].decode('ascii'))
+	return (in_fn, out_fn)
 
 # returns relative path to the file with LaTeX problem statement (or None if not found)
 # statements_name is the name of the directory with statements
@@ -364,6 +408,12 @@ def read_samples(statement_path):
 def read_limits(statement_path):
 	# type: (Optional[str]) -> Optional[Tuple[float, float]]
 	return extract_limits(read_file_contents(statement_path))
+
+# returns pair of input/output filenames specified in problem
+# by default, it is ('input.txt', 'output.txt')
+def read_filenames(statement_path = None):
+	# type: (Optional[str]) -> Tuple[str, str]
+	return extract_filenames(read_file_contents(statement_path or find_problem_statement()))
 
 ############################## Compiling sources ###############################
 
@@ -663,8 +713,12 @@ def controlled_run_solution(solution, time_limit, memory_limit, interactive, qui
 		return sol_res._replace(verdict = exitcode_verdict)
 	else:
 		proclaim_process_runs([popen_args], [time_limit], [corrected_memory_limit], quiet)
-		process = psutil.Popen(popen_args)
-		res = control_processes_execution([process], [time_limit], [corrected_memory_limit], None, quiet)
+		cmin = open("input.txt", "rb") if enable_stdinout_redirection else null_context(None)       # type: Any
+		with cmin as fin:
+			cmout = open("_stdout_", "wb") if enable_stdinout_redirection else null_context(None)   # type: Any
+			with cmout as fout:
+				process = psutil.Popen(popen_args, stdin = fin, stdout = fout)
+				res = control_processes_execution([process], [time_limit], [corrected_memory_limit], None, quiet)
 		return res[0]
 
 ############################## Diffs and checkers ##############################
@@ -792,10 +846,24 @@ def check_solution_on_test(cfg, solution, input_file, gen_output = False):
 	# type: (Config, str, str, bool) -> RunResult
 	assert(path.dirname(path.abspath(solution)) == path.abspath(os.getcwd()))
 	copyfile(input_file, 'input.txt')
+	if path.isfile('output.txt'):
+		os.remove('output.txt')
 	interactive = if_exe_exists('interactor')
+
+	(in_fn, out_fn) = read_filenames()
+	copyfile('input.txt', in_fn)
 	res = controlled_run_solution(solution, cfg.tl, cfg.ml, interactive, cfg.quiet)
+	if path.isfile(out_fn):
+		copyfile(out_fn, 'output.txt')
+
+	if enable_stdinout_redirection:
+		if getfilesize('_stdout_') == 0:
+			os.remove('_stdout_')
+		if getfilesize('output.txt') <= 0 and getfilesize('_stdout_') > 0:
+			copyfile('_stdout_', 'output.txt')
 	if gen_output:
 		copyfile('output.txt', 'answer.txt')
+
 	if not interactive:
 		if not gen_output:
 			if path.isfile(get_output_by_input(input_file)):

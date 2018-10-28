@@ -49,48 +49,36 @@ def main(argv = None):
 	try:
 		# find out what should we compile
 		compile_list = []
-
 		if args.compile or (not if_exe_exists('check') and not if_exe_exists('interactor')):
 			compile_list.extend(get_sources_in_problem(checker = True))
 		if args.compile and args.stress:
 			compile_list.extend(get_sources_in_problem(validator = True))
 
+		# find out solutions we have to compile
+		sol_prelist = []        # type: List[str]
 		if test_all_solutions:
-			# compile all solution sources
 			if args.compile:
 				compile_list.extend(get_sources_in_problem(solutions = True))
 		else:
 			for sol in args.solutions:
-				sol_noext = path.splitext(sol)[0]
-				# compile specified solution
-				if args.compile:
-					if is_source(sol):
-						compile_list.append(sol)
-					else:
-						related_files = [sol] + glob.glob(sol_noext + '.*')
-						related_sources = filter(is_source, related_files)
-						compile_list.extend(related_sources)
-				else:
-					if is_source(sol) and not has_java_task(sol):
-						compile_list.append(sol)
+				exe = add_source_to_compile_list(cfg, sol, compile_list, args.compile)
+				sol_prelist.append(exe)
 
 		# compile all the necessary sources
 		compile_results = compile_sources(compile_list, cfg)
 		if len(compile_results[1]) > 0:
 			on_error(10)
 
-		# find out solutions we have to test
+		# filter only solutions which are present
 		solutions_list = []     # type: List[str]
-	
 		if test_all_solutions:
 			solutions_list = get_solutions()
 		else:
-			for sol in args.solutions:
-				sol_noext = path.splitext(sol)[0]
-				if is_solution(sol_noext):
-					solutions_list.append(sol_noext)
+			for sol in sol_prelist:
+				if is_solution(sol):
+					solutions_list.append(sol)
 				else:
-					printq(cfg.quiet, colored_verdict('W', "Solution %s does not exist" % sol_noext))
+					printq(cfg.quiet, colored_verdict('W', "Solution %s does not exist" % sol))
 					on_error(11)
 
 		# test all solutions

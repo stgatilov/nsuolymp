@@ -1322,3 +1322,29 @@ def error_handling_helper(cfg, err):
 		if cfg.stop or force:
 			raise StopError()
 	return on_error
+
+# checks user-specified file, and adds its source to compilation if necessary
+# returns name of executable (which can most likely be run as solution / generator)
+# exact rules are:
+#   1) if filename points to source file, then always compile
+#   2) if force=True (--compile on command line), then always compile
+#   3) compile others only if source code is available, but executable is not
+def add_source_to_compile_list(cfg, filename, compile_list, force = False):
+	# type: (Config, str, List[str], bool) -> str
+	filename_noext = path.splitext(filename)[0]
+	related_files = glob.glob(filename_noext + '.*')
+	if path.exists(filename) and filename not in related_files:
+		related_files.append(filename)
+	related_sources = list(filter(is_source, related_files))
+	if len(related_sources) == 0:
+		return filename
+	if force:
+		compile_list.extend([filename] if is_source(filename) else related_sources)
+		return filename_noext
+	if is_source(filename) and not has_java_task(filename):
+		compile_list.append(filename)
+		return filename_noext
+	if not (if_exe_exists(filename_noext) or is_solution(filename_noext)):
+		compile_list.extend(related_sources)
+		return filename
+	return filename

@@ -29,12 +29,6 @@ def main(argv = None):
 	err = [0]
 	on_error = error_handling_helper(cfg, err)
 
-	# look at solution involved
-	sol = sol_noext = None
-	if args.solution is not None:
-		sol = args.solution
-		sol_noext = path.splitext(sol)[0]
-
 	try:
 		# parse the script
 		script_results = parse_generation_script(args.script)
@@ -44,44 +38,33 @@ def main(argv = None):
 		test_indices = [line.test for line in script_results]
 
 		# compile various stuff
-		sources = list(set([line.generator for line in script_results]))
-		if not args.compile:
-			sources = list(filter(lambda gen: not if_exe_exists(gen), sources))
-		sources = list(filter(lambda f: path.splitext(f)[0] in sources, get_sources_in_problem(generators = True)))
-		if sol is not None and is_solution(sol):
-			if args.compile or is_source(sol) and not has_java_task(sol):
-				sources.append(sol)
+		compile_list = []   # type: List[str]
+		for gen in set([line.generator for line in script_results]):
+			add_source_to_compile_list(cfg, gen, compile_list, args.compile)
+		if args.solution is not None:
+			args.solution = add_source_to_compile_list(cfg, args.solution, compile_list, args.compile)
 		if args.validate:
-			src = get_sources_in_problem(validator = True, checker = True)
-			if not args.compile:
-				src = list(filter(lambda f: not if_exe_exists(path.splitext(f)[0]), src))
-			sources += src
-		compile_results = compile_sources(sources, cfg)
+			for src in get_sources_in_problem(validator = True, checker = True):
+				add_source_to_compile_list(cfg, src, compile_list, args.compile)
+		compile_results = compile_sources(compile_list, cfg)
 		if len(compile_results[1]) > 0:
 			on_error(2)
 
-		# execute it line by line to generate inputs
+		# execute script line by line to generate inputs
 		generate_results = execute_generation_script(cfg, script_results)
 		if len(generate_results[1]) > 0:
 			on_error(3)
 
-		# validate the whole test set
+		# validate the tests just generated
 		if args.validate:
-			validate_results = []
-			for idx in test_indices:
-				f = get_test_input(idx)
-				ok = validate_test(f, cfg.quiet)
-				if ok is None:
-					validate_results = "not found"
-					break
-				if not ok:
-					validate_results.append(f)
+			test_inputs = [get_test_input(k) for k in test_indices]
+			validate_results = validate_many_tests(test_inputs, cfg.quiet)
 			if len(validate_results) > 0:
 				on_error(4)
 
 		# generate output files by running the solution
-		if isinstance(sol, str) and isinstance(sol_noext, str):
-			test_results = (sol_noext, check_solution(cfg, sol_noext, ','.join(str(i) for i in test_indices), True))
+		if args.solution is not None:
+			test_results = (args.solution, check_solution(cfg, args.solution, ','.join(str(i) for i in test_indices), True))
 			if not all(res.verdict == 'A' for res in test_results[1]):
 				on_error(5)
 

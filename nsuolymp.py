@@ -59,6 +59,12 @@ def read_file_contents(filepath):
 	with open(filepath, 'rb') as f:
 		return f.read()
 
+# writes given bytes into specified file
+def write_file_contents(filepath, contents):
+	# type: (Union[str, bytes], bytes) -> None
+	with open(filepath, 'wb') as f:
+		f.write(contents)
+
 # returns a function that can run given CMD line
 # it supresses output to stdout/stderr if quiet is set
 def cmd_runner(quiet = False):
@@ -950,15 +956,21 @@ def print_solutions_results(data):
 	text_table = [format_solution_result(*elem) for elem in data]
 	print(draw_table_colored(text_table))
 
-# converts EOLN style of given byte string to system's default (or to specified style)
-# note: data must be read and written to/from file in binary mode
-def convert_eoln(contents, style = ""):
-	# type: (bytes, str) -> bytes
+# returns EOLN character for system's default or for specified style
+def get_eoln_char(style = ""):
+	# type: (str) -> bytes
 	wanted_eol = os.linesep.encode()
 	if style.lower() in ['linux', 'unix', 'lf']:
 		wanted_eol = b'\n'
 	if style.lower() in ['win', 'windows', 'dos', 'crlf']:
 		wanted_eol = b'\r\n'
+	return wanted_eol
+
+# converts EOLN style of given byte string to system's default (or to specified style)
+# note: data must be read and written to/from file in binary mode
+def convert_eoln(contents, style = ""):
+	# type: (bytes, str) -> bytes
+	wanted_eol = get_eoln_char(style)
 	return contents.replace(b'\r\n', b'\n').replace(b'\r', b'\n').replace(b'\n', wanted_eol)
 
 # run validator on given test (i.e. input_file)
@@ -969,7 +981,7 @@ def validate_test(input_file, quiet = False):
 		return None
 	printq(quiet, './validator < ' + input_file)
 	with open(input_file, 'rb') as f:   # type: IO[Any]
-		if validator_eoln_relaxed:
+		if get_eoln_char(contest_eoln_style) != get_eoln_char():
 			data = f.read()
 			data = convert_eoln(data)
 			f = tempfile.TemporaryFile()
@@ -978,19 +990,25 @@ def validate_test(input_file, quiet = False):
 		err = cmd_runner(quiet)('./validator', input = f).returncode
 	return err == 0
 
-# run validator on all tests
+# run validator on given set of tests
 # returns a list of relative paths to all the failed test input files
 # if validator is missing, some string is returned
-def validate_all_tests(quiet = False):
-	# type: (bool) -> Union[List[str], str]
+def validate_many_tests(tests, quiet = False):
+	# type: (List[str], bool) -> Union[List[str], str]
 	incorrect = []
-	for f in get_tests_inputs():
+	for f in tests:
 		ok = validate_test(f, quiet)
 		if ok is None:
 			return "not found"
 		if not ok:
 			incorrect.append(f)
 	return incorrect
+
+# run validator on all tests
+# see validate_many_tests for more info
+def validate_all_tests(quiet = False):
+	# type: (bool) -> Union[List[str], str]
+	return validate_many_tests(get_tests_inputs(), quiet)
 
 # pretty-print the results returned by validate_all_tests
 def print_validate_results(results):
@@ -1208,3 +1226,149 @@ def print_compile_results(results):
 	if len(fails) > 0:
 		sources = '[' + ', '.join(fails) + ']'
 		print(colored_verdict('W', "Failed to compile: " + sources))
+
+# data about simple generation script
+GenScriptLine = NamedTuple('GenScriptLine', [('generator', str), ('args', List[str]), ('test', int)])
+
+# parse the batch-like script with sequence of generator invocations
+# if script is critically ill-formed, then only error message is returned
+# otherwise, a pair is returned: list of generating lines and a list of warning messages
+def parse_generation_script(filename = 'gen.cmd'):
+	# type: (str) -> Union[Tuple[List[GenScriptLine], List[str]], str]
+	content = read_file_contents(filename)
+	if content is None:
+		return "Generator file %s not found" % filename
+	scriptLines = []
+	warnings = []
+	lines = content.split(b'\n')
+	ids = {}        # type: Dict[int, None]
+	for lb in lines:
+		l = str(lb.decode('ascii'))
+		if '#' in l:
+			l = l[:l.find('#')]
+			warnings.append("Shell-style comments not allowed: %s" % l)
+		tokens = l.split()
+		if len(tokens) == 0 or tokens[0] == 'rem':
+			continue
+		if len(tokens) < 2:
+			return "Too few tokens in line: %s" % l
+		genfn = tokens[0]
+		redirect = tokens[-1]
+		args = tokens[1:-1]
+		if not redirect.startswith('>') and len(args) > 0 and args[-1] == '>':
+			redirect = args[-1] + redirect
+			args = args[0:-1]
+		if not redirect.startswith('>'):
+			return "Last argument must be redirection: %s" % redirect
+		idx = get_test_index(redirect[1:])
+		if get_test_input(idx) != redirect[1:]:
+			return "Filename is incorrect: %s != %s" % (get_test_input(idx), redirect[1:])
+		if genfn.startswith('./'):
+			warnings.append("Dot-slash in generator not allowed: %s" % genfn)
+			genfn = genfn[2:]
+		if '.' in genfn:
+			warnings.append("Generator must be specified without extension: %s" % genfn)
+			genfn = genfn[:genfn.find('.')]
+		if genfn not in [path.splitext(f)[0] for f in get_generator_sources()]:
+			return "Cannot find source file for generator %s" % genfn
+		if idx in ids:
+			return "Test with index %d is produced twice" % idx
+		ids[idx] = None
+		scriptLines.append(GenScriptLine(genfn, args, idx))
+	return (scriptLines, warnings)
+
+# pretty-print results of parse_simple_generation_script
+def print_parse_generation_script(results):
+	# type: (Union[Tuple[List[GenScriptLine], List[str]], str]) -> None
+	if isinstance(results, str):
+		print(colored_verdict('W', 'Gen-script parse error: %s' % results))
+	else:
+		print(colored_verdict('A', 'Generator script is well-formed (%d tests)' % len(results[0])))
+		if results[1]:
+			print(colored_verdict('T', 'Warnings:\n' + '\n'.join(results[1])))
+
+# executes one line of simple generation script (aka "gen_random 10 50 >tests/17.in")
+def execute_generation_line(cfg, line):
+	# type: (Config, GenScriptLine) -> bool
+	exe = line.generator if os.name == 'nt' else path.join('./', line.generator)
+	testfn = get_test_input(line.test)
+	old_data = read_file_contents(testfn)
+	cmd = '%s %s >%s' % (exe, ' '.join(line.args), testfn)
+	printq(cfg.quiet, "Cmd: %s" % colored_verdict('R', cmd))
+	err = (sarge.capture_stderr if cfg.quiet else sarge.run)(cmd).returncode
+	if err != 0:
+		printq(cfg.quiet, colored_verdict('W', 'Failed to execute generator line'))
+		return False
+	new_data = read_file_contents(testfn)
+	if new_data is not None and get_eoln_char(contest_eoln_style) != get_eoln_char():
+		new_data = convert_eoln(new_data, contest_eoln_style)
+		write_file_contents(testfn, new_data)
+	if old_data is not None and old_data != new_data:
+		printq(cfg.quiet, colored_verdict('M', 'Contents of %s has changed' % testfn))
+		return False
+	return True
+
+# executes the whole simple generation script with all its lines
+# returns pair of list of successfully generated tests, and list of tests failed to generate
+# if cfg.stop=True, then lists may be incomplete (they include all tests up to first error inclusive)
+def execute_generation_script(cfg, script):
+	# type: (Config, List[GenScriptLine]) -> Tuple[List[int], List[int]]
+	successes = []      # type: List[int]
+	fails = []          # type: List[int]
+	for line in script:
+		res = execute_generation_line(cfg, line)
+		(successes if res else fails).append(line.test)
+		if not res and cfg.stop:
+			break
+	return (successes, fails)
+
+# pretty-print results of execute_generation_script
+def print_execute_generation_script(results):
+	# type: (Tuple[List[int], List[int]]) -> None
+	successes = results[0]
+	fails = results[1]
+	tests = '[' + ', '.join([str(i) for i in successes]) + ']'
+	print(colored_verdict('A', "Successfully generated: " + tests))
+	if len(fails) > 0:
+		tests = '[' + ', '.join([str(i) for i in fails]) + ']'
+		print(colored_verdict('W', "Failed to generate: " + tests))
+
+################################### Script helpers #############################
+
+# helper for return code & stop-on-error
+class StopError(Exception):
+	pass
+def error_handling_helper(cfg, err):
+	# type: (Config, List[int]) -> Callable[..., None]
+	def on_error(code, force = False):
+		# type: (int, bool) -> None
+		err[0] = err[0] or code
+		if cfg.stop or force:
+			raise StopError()
+	return on_error
+
+# checks user-specified file, and adds its source to compilation if necessary
+# returns name of executable (which can most likely be run as solution / generator)
+# exact rules are:
+#   1) if filename points to source file, then always compile
+#   2) if force=True (--compile on command line), then always compile
+#   3) compile others only if source code is available, but executable is not
+def add_source_to_compile_list(cfg, filename, compile_list, force = False):
+	# type: (Config, str, List[str], bool) -> str
+	filename_noext = path.splitext(filename)[0]
+	related_files = glob.glob(filename_noext + '.*')
+	if path.exists(filename) and filename not in related_files:
+		related_files.append(filename)
+	related_sources = list(filter(is_source, related_files))
+	if len(related_sources) == 0:
+		return filename
+	if force:
+		compile_list.extend([filename] if is_source(filename) else related_sources)
+		return filename_noext
+	if is_source(filename) and not has_java_task(filename):
+		compile_list.append(filename)
+		return filename_noext
+	if not (if_exe_exists(filename_noext) or is_solution(filename_noext)):
+		compile_list.extend(related_sources)
+		return filename
+	return filename

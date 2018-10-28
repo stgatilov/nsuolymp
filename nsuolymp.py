@@ -978,19 +978,25 @@ def validate_test(input_file, quiet = False):
 		err = cmd_runner(quiet)('./validator', input = f).returncode
 	return err == 0
 
-# run validator on all tests
+# run validator on given set of tests
 # returns a list of relative paths to all the failed test input files
 # if validator is missing, some string is returned
-def validate_all_tests(quiet = False):
-	# type: (bool) -> Union[List[str], str]
+def validate_many_tests(tests, quiet = False):
+	# type: (List[str], bool) -> Union[List[str], str]
 	incorrect = []
-	for f in get_tests_inputs():
+	for f in tests:
 		ok = validate_test(f, quiet)
 		if ok is None:
 			return "not found"
 		if not ok:
 			incorrect.append(f)
 	return incorrect
+
+# run validator on all tests
+# see validate_many_tests for more info
+def validate_all_tests(quiet = False):
+	# type: (bool) -> Union[List[str], str]
+	return validate_many_tests(get_tests_inputs(), quiet)
 
 # pretty-print the results returned by validate_all_tests
 def print_validate_results(results):

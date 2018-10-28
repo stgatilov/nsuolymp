@@ -35,11 +35,12 @@ def main(argv = None):
 		if isinstance(script_results, str):
 			on_error(1, force = True)
 		assert(not isinstance(script_results, str))
-		test_indices = [line.test for line in script_results]
+		test_indices = [line.test for line in script_results[0]]
+		generator_names = list(set([line.generator for line in script_results[0]]))
 
 		# compile various stuff
 		compile_list = []   # type: List[str]
-		for gen in set([line.generator for line in script_results]):
+		for gen in generator_names:
 			add_source_to_compile_list(cfg, gen, compile_list, args.compile)
 		if args.solution is not None:
 			args.solution = add_source_to_compile_list(cfg, args.solution, compile_list, args.compile)
@@ -51,7 +52,7 @@ def main(argv = None):
 			on_error(2)
 
 		# execute script line by line to generate inputs
-		generate_results = execute_generation_script(cfg, script_results)
+		generate_results = execute_generation_script(cfg, script_results[0])
 		if len(generate_results[1]) > 0:
 			on_error(3)
 

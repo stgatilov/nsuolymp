@@ -1219,17 +1219,22 @@ def print_compile_results(results):
 GenScriptLine = NamedTuple('GenScriptLine', [('generator', str), ('args', List[str]), ('test', int)])
 
 # parse the batch-like script with sequence of generator invocations
-# if script is ill-formed, then message string is returned
+# if script is critically ill-formed, then only error message is returned
+# otherwise, a pair is returned: list of generating lines and a list of warning messages
 def parse_generation_script(filename = 'gen.cmd'):
-	# type: (str) -> Union[List[GenScriptLine], str]
+	# type: (str) -> Union[Tuple[List[GenScriptLine], List[str]], str]
 	content = read_file_contents(filename)
 	if content is None:
 		return "Generator file %s not found" % filename
-	result = []
+	scriptLines = []
+	warnings = []
 	lines = content.split(b'\n')
 	ids = {}        # type: Dict[int, None]
 	for lb in lines:
 		l = str(lb.decode('ascii'))
+		if '#' in l:
+			l = l[:l.find('#')]
+			warnings.append("Shell-style comments not allowed: %s" % l)
 		tokens = l.split()
 		if len(tokens) == 0 or tokens[0] == 'rem':
 			continue
@@ -1247,24 +1252,28 @@ def parse_generation_script(filename = 'gen.cmd'):
 		if get_test_input(idx) != redirect[1:]:
 			return "Filename is incorrect: %s != %s" % (get_test_input(idx), redirect[1:])
 		if genfn.startswith('./'):
+			warnings.append("Dot-slash in generator not allowed: %s" % genfn)
 			genfn = genfn[2:]
 		if '.' in genfn:
-			return "Generator must be specified without extension: %s" % genfn
+			warnings.append("Generator must be specified without extension: %s" % genfn)
+			genfn = genfn[:genfn.find('.')]
 		if genfn not in [path.splitext(f)[0] for f in get_generator_sources()]:
 			return "Cannot find source file for generator %s" % genfn
 		if idx in ids:
 			return "Test with index %d is produced twice" % idx
 		ids[idx] = None
-		result.append(GenScriptLine(genfn, args, idx))
-	return result
+		scriptLines.append(GenScriptLine(genfn, args, idx))
+	return (scriptLines, warnings)
 
 # pretty-print results of parse_simple_generation_script
 def print_parse_generation_script(results):
-	# type: (Union[List[GenScriptLine], str]) -> None
+	# type: (Union[Tuple[List[GenScriptLine], List[str]], str]) -> None
 	if isinstance(results, str):
 		print(colored_verdict('W', 'Gen-script parse error: %s' % results))
 	else:
-		print(colored_verdict('A', 'Generator script is well-formed (%d tests)' % len(results)))
+		print(colored_verdict('A', 'Generator script is well-formed (%d tests)' % len(results[0])))
+		if results[1]:
+			print(colored_verdict('T', 'Warnings:\n' + '\n'.join(results[1])))
 
 # executes one line of simple generation script (aka "gen_random 10 50 >tests/17.in")
 def execute_generation_line(cfg, line):

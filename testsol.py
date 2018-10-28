@@ -3,6 +3,7 @@ from nsuolymp import *
 import argparse, sys
 
 def main(argv = None):
+	# type: (Optional[List[str]]) -> int
 	# handle cmd arguments
 	parser = argparse.ArgumentParser(description = "Runs one or many solutions on current tests.")
 	parser.add_argument('solutions', help = "one or several solutions: either executables or source files (* or @ means 'all solutions')", nargs = '+')
@@ -46,9 +47,10 @@ def main(argv = None):
 		pass
 	class ret:
 		code = 0
-	def on_error(code):
+	def on_error(code, force = False):
+		# type: (int, bool) -> None
 		ret.code = ret.code or code
-		if cfg.stop:
+		if cfg.stop or force:
 			raise StopError()
 
 	try:

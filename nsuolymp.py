@@ -981,7 +981,7 @@ def validate_test(input_file, quiet = False):
 		return None
 	printq(quiet, './validator < ' + input_file)
 	with open(input_file, 'rb') as f:   # type: IO[Any]
-		if validator_eoln_relaxed:
+		if get_eoln_char(contest_eoln_style) != get_eoln_char():
 			data = f.read()
 			data = convert_eoln(data)
 			f = tempfile.TemporaryFile()
@@ -1300,6 +1300,9 @@ def execute_generation_line(cfg, line):
 		printq(cfg.quiet, colored_verdict('W', 'Failed to execute generator line'))
 		return False
 	new_data = read_file_contents(testfn)
+	if new_data is not None and get_eoln_char(contest_eoln_style) != get_eoln_char():
+		new_data = convert_eoln(new_data, contest_eoln_style)
+		write_file_contents(testfn, new_data)
 	if old_data is not None and old_data != new_data:
 		printq(cfg.quiet, colored_verdict('M', 'Contents of %s has changed' % testfn))
 		return False

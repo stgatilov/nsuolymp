@@ -19,14 +19,15 @@ default_compiler_order = {
 	"java": ["javac"],
 }
 
-# When set to true:
+# when set to true:
 # 1. input file is additionally passed to stdin
 # 2. stdout is redirected to temp file, and it is taken instead of file if file is absent/empty
 enable_stdinout_redirection = True
 
-# if set to true, then endlines are converted on-the-fly to local system defaults before being passed to validator
-# note: useful when preparing contest on OS different from the one used on contest
-validator_eoln_relaxed = False
+# specifies how endlines are encoded on the contest testing machines
+# nsuts invokes solutions mainly on Windows platform, hence dos-style is used
+# for Linux-hosted contests, set 'linux' here
+contest_eoln_style = 'dos'
 
 # this function is applied to the time limit extracted from the problem statement
 # you can adjust this function in order to match approximately speed of the testing server

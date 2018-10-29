@@ -2,45 +2,51 @@
 
 # for each compiler, specify flags added to command line
 default_compiler_flags = {
-	"dcc32": "-cc",
-	"fpc": "-O2",
-	"javac": "",
-	"cl": "/O2 /EHsc",
-	"g++": "-O2 -std=gnu++11",
-	"gcc": "-O2 -std=c11",
+    "dcc32": "-cc",
+    "fpc": "-O2",
+    "javac": "",
+    "cl": "/O2 /EHsc",
+    "g++": "-O2 -std=gnu++11",
+    "gcc": "-O2 -std=c11",
 }
 
 # for each language, specify in which order to try compilers to build it
 # (useful e.g. for choosing between cl/g++ and fpc/dcc32 reliably)
 default_compiler_order = {
-	"cpp": ["cl", "g++"],
-	"c": ["cl", "gcc"],
-	"pas": ["dcc32", "fpc"],
-	"java": ["javac"],
+    "cpp": ["cl", "g++"],
+    "c": ["cl", "gcc"],
+    "pas": ["dcc32", "fpc"],
+    "java": ["javac"],
 }
 
 # NSUTs credentials and contest options
 # required to submits solutions
 nsuts_options = {
-        "nsuts": "http://olympic.nsu.ru/nsuts-new",
+    "nsuts": "http://olympic.nsu.ru/nsuts-new",
 
-	"email": "user@name.ru",
-	"password": "securepassword",
-	"olympiad_id": 58,
-	"tour_id": 11186,
+    "email": "user@name.ru",
+    "password": "securepassword",
+    "olympiad_id": 58,
+    "tour_id": 11186,
 
-        "compiler": {
-            "cpp": "vcc2015",
-            "java": "java8u101x32"
-        }
+    "compiler": {
+        "cpp": "vcc2015",
+        "java": "java8u101x32"
+    }
 }
 
-# if set to true, then endlines are converted on-the-fly to local system defaults before being passed to validator
-# note: useful when preparing contest on OS different from the one used on contest
-validator_eoln_relaxed = False
+# when set to true:
+# 1. input file is additionally passed to stdin
+# 2. stdout is redirected to temp file, and it is taken instead of file if file is absent/empty
+enable_stdinout_redirection = True
+
+# specifies how endlines are encoded on the contest testing machines
+# nsuts invokes solutions mainly on Windows platform, hence dos-style is used
+# for Linux-hosted contests, set 'linux' here
+contest_eoln_style = 'win'
 
 # this function is applied to the time limit extracted from the problem statement
 # you can adjust this function in order to match approximately speed of the testing server
 def convert_default_time_limit(tl):
-	# type: (float) -> float
-	return tl		# e.g.:  1.5 * tl
+    # type: (float) -> float
+    return tl       # e.g.:  1.5 * tl

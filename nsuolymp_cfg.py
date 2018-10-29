@@ -1,3 +1,4 @@
+from typing import Dict, Any
 # some user preferences can be set here
 
 # for each compiler, specify flags added to command line
@@ -33,7 +34,7 @@ nsuts_options = {
         "cpp": "vcc2015",
         "java": "java8u101x32"
     }
-}
+} # type: Dict[str, Any]
 
 # when set to true:
 # 1. input file is additionally passed to stdin

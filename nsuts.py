@@ -12,6 +12,7 @@ from time import sleep
 #
 
 def submit(nsuts, task, filename):
+    # type: (NsutsClient, int, str) -> int
     source_code = ""
 
     ext = guess_source_language(filename)
@@ -26,9 +27,12 @@ def submit(nsuts, task, filename):
     nsuts.submit_solution(task, compiler, source_code)
 
     submit_id = nsuts.get_my_last_submit_id()
+    if submit_id is None:
+        raise Exception("Cannot find submit immediately after sending")
     return submit_id
 
 def wait_status(nsuts, solutions):
+    # type: (NsutsClient, List[Tuple[int, str]]) -> None
     queued, testing = len(solutions), 0
 
     max_filename_len = 1
@@ -62,6 +66,7 @@ def wait_status(nsuts, solutions):
         sleep(3)
 
 def main(argv = None):
+    # type: (Optional[List[str]]) -> int
     parser = argparse.ArgumentParser(description = "Submit solutions to NSUTs")
     parser.add_argument('action', type = str, choices = ['submit'])
     parser.add_argument('task', type = int, help = "task id")
@@ -86,6 +91,8 @@ def main(argv = None):
 
     if args.wait == True:
         wait_status(nsuts, list(zip(solution_ids, solution_list)))
+
+    return 0
 
 if __name__ == '__main__':
     sys.exit(main())

@@ -2,19 +2,23 @@
 
 import requests
 import json
+from typing import Any, Dict, List, Tuple, Optional
 
 class NsutsClient:
     def __init__(self, config):
+        # type: (Dict[str, Any]) -> None
         self.config = config
 
     # internal
     def get_cookies(self):
+        # type: () -> Dict[str, str]
         return {
             'CGISESSID': self.config['session_id'],
             'PHPSESSID': self.config['session_id']
         }
 
     def request_get(self, path):
+        # type: (str) -> Any
         if path[0] != '/':
             path = '/' + path
         url = self.config['nsuts'] + path
@@ -27,9 +31,11 @@ class NsutsClient:
         
     # public
     def is_authorized(self):
+        # type: () -> bool
         return 'session_id' in self.config
 
     def auth(self):
+        # type: () -> None
         data = {
             'email': self.config['email'],
             'password': self.config['password']
@@ -46,14 +52,17 @@ class NsutsClient:
         self.config['session_id'] = auth_result['sessid']
 
     def select_olympiad(self, olympiad_id):
+        # type: (int) -> None
         response = self.request_get('/select_olympiad.cgi' + '?olympiad=' + str(olympiad_id))
         # assume everything is ok
 
     def select_tour(self, tour_id):
+        # type: (int) -> None
         response = self.request_get('/select_tour.cgi' + '?tour_to_select=' + str(tour_id))
         # assume everything is ok
 
     def get_admin_queue(self, limit = 25, tasks = []):
+        # type: (int, List[int]) -> Any
         url = '/api/submission.php?limit=' + str(limit)
         if len(tasks) > 0:
             url = url + '&task=' + ','.join(map(str, tasks))
@@ -62,11 +71,13 @@ class NsutsClient:
         return submits
     
     def get_solution_source(self, solution_id):
-        code = self.request_get('/show.cgi?source=' + str(solution_id)).text
+        # type: (int) -> str
+        code = self.request_get('/show.cgi?source=' + str(solution_id)).text    # type: str
         start_pos = code.find('<code>')
         return code[start_pos + 6:-13]
 
     def submit_solution(self, task_id, compiler_name, source_text):
+        # type: (int, str, str) -> None
         data = {
             'lang': compiler_name,
             'task': task_id,
@@ -76,6 +87,7 @@ class NsutsClient:
         response = requests.post(url, cookies = self.get_cookies(), data = data)
 
     def get_my_last_submit_id(self):
+        # type: () -> Optional[int]
         submits = self.get_my_submits_status()
         if len(submits) == 0:
             return None
@@ -83,11 +95,13 @@ class NsutsClient:
         return int(submits[-1]['id'])
 
     def get_my_submits_status(self):
+        # type: () -> Any
         response = self.request_get('/api/report')
         return json.loads(response.text)['submits']
 
 
 def main():
+    # type: () -> None
     config = {
         # URL is required field in this config
         'nsuts': 'http://192.168.1.7/nsuts-new',
@@ -102,7 +116,7 @@ def main():
         # Olympid ID and and Tour ID are not using by default, these lines can be omitted
         'olympiad_id': 58,
         'tour_id': 11114
-    }
+    } # type: Any
 
     nsuts = NsutsClient(config)
     if not nsuts.is_authorized():

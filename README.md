@@ -20,8 +20,8 @@ On POSIX, you should mark all scripts with shebang as executable (with `chmod`).
 ## Setup
 
 To start working, add *nsuolymp* directory to PATH, e.g. on Windows:
-	
-	set path=%path%;G:\blahblah\jury\Gatilov\nsuolymp
+
+    set path=%path%;G:\blahblah\jury\Gatilov\nsuolymp
 
 Now you should be able to run scripts by simply typing `testsol my_sol` into console.
 
@@ -31,38 +31,38 @@ Now you should be able to run scripts by simply typing `testsol my_sol` into con
 `nsuolymp` relies heavily on conventions about naming and directory structure.
 Here is an example of proper directory structure:
 
-	_statements
-		problems.tex			# main LaTeX file for statements
-		olymp.sty				# prepared with olymp.sty
-		problems
-			autocomplete.tex	# LaTeX text for each problem statement
-			cubes.tex           #
-	autocomplete
-		validator.cpp			# validator must be present
-		check.cpp				# standard checker is expected
-		testlib.h				# prepared with C++ testlib
-		tests
-			1.in				#
-			1.out				# 
-			2.in				# tests in nsuts naming convention
-			2.out				# located in tests/ subdirectory
-			...					#
-			37.in				#
-			37.out
-		sol_ruban_ok.dpr		#
-		sol_sg_slow.cpp			# solutions start with 'sol_'
-		sol_fat_ok.c			#
-	cubes
-		sol_ss_ok				# Java solutions as subdirectories (deprecated: for old nsuts)
-			Task.java			# starting with 'sol_'
-			Task.class			# and with Task.java|class in it
-		sol_sg_wa.java			# Java solution can be a file too (preferred way)
-		validator.cpp
-		testlib.h
-		gen_random.cpp			#
-		gen_spiral.cpp			# generators start with 'gen_'
-		gen_spiral.exe			#
-		gen.cmd					# simple generating script
+    _statements
+        problems.tex            # main LaTeX file for statements
+        olymp.sty               # prepared with olymp.sty
+        problems
+            autocomplete.tex    # LaTeX text for each problem statement
+            cubes.tex           #
+    autocomplete
+        validator.cpp           # validator must be present
+        check.cpp               # standard checker is expected
+        testlib.h               # prepared with C++ testlib
+        tests
+            1.in                #
+            1.out               # 
+            2.in                # tests in nsuts naming convention
+            2.out               # located in tests/ subdirectory
+            ...                 #
+            37.in               #
+            37.out
+        sol_ruban_ok.dpr        #
+        sol_sg_slow.cpp         # solutions start with 'sol_'
+        sol_fat_ok.c            #
+    cubes
+        sol_ss_ok               # Java solutions as subdirectories (deprecated: for old nsuts)
+            Task.java           # starting with 'sol_'
+            Task.class          # and with Task.java|class in it
+        sol_sg_wa.java          # Java solution can be a file too (preferred way)
+        validator.cpp
+        testlib.h
+        gen_random.cpp          #
+        gen_spiral.cpp          # generators start with 'gen_'
+        gen_spiral.exe          #
+        gen.cmd                 # simple generating script
 
 
 Here are some rules:
@@ -99,71 +99,71 @@ Here are some rules:
 
 Compile everything possible (in current directory):
 
-	compile @
+    compile @
 
 Same as before, but stop if something does not compile:
 
-	compile @ -e
+    compile @ -e
 
 Validate tests in current problem in every supported way:
 
-	validate -a
+    validate -a
 
 Same as before, but force to compile validator and checker:
 
-	validate -a -c
+    validate -a -c
 
 Run given solution `sol_sg_ok` on all tests:
 
-	testsol sol_sg_ok
+    testsol sol_sg_ok
 
 Compile and run given solution `sol_sg_ok` on all tests:
 
-	testsol sol_sg_ok.cpp
+    testsol sol_sg_ok.cpp
 
 Run two solutions without any time and memory limits:
 
-	testsol sol_sg_ok sol_sg_dumb --tl 0 --ml 0
+    testsol sol_sg_ok sol_sg_dumb --tl 0 --ml 0
 
 Run all solutions on all tests:
 
-	testsol @
+    testsol @
 
 Run all solutions, do not check tests after first fail (ACM-style):
 
-	testsol @ -e
+    testsol @ -e
 
 Compile and run all solutions, suppress verbose console output:
 
-	testsol @ -c -q
+    testsol @ -c -q
 
 Run all solutions on three first tests with custom limits:
 
-	testsol @ --tests 1,2,3 --tl 3 --ml 512
+    testsol @ --tests 1,2,3 --tl 3 --ml 512
 
 Run two solutions on (test 1, tests from 11 to 14, and tests starting with 'bad'):
 
-	testsol sol_sg_ok sol_xx_ok --tests "1,11-14,bad*"
+    testsol sol_sg_ok sol_xx_ok --tests "1,11-14,bad*"
 
 Generate `.out` files for all tests using `sol_sg_ok` solution with big TL:
 
-	testsol sol_sg_ok --gen-output --tl 10
+    testsol sol_sg_ok --gen-output --tl 10
 
 Stress-test two solutions with testlib generator `gen_random` (with parameters `10 3 5 seed`):
 
-	testsol sol_sg_ok sol_sg_dumb -s "gen_random 10 3 5"
+    testsol sol_sg_ok sol_sg_dumb -s "gen_random 10 3 5"
 
 Just run `cool_program.exe` and see how much time/memory it takes:
 
-	runsol cool_program
+    runsol cool_program
 
 Generate input test files using the simple-batch script `gen.cmd`:
 
-	generate gen.cmd
+    generate gen.cmd
 
 Generate tests using the simple-batch script `gen.cmd`, generate outputs using solution `sol_ok`:
 
-	generate gen.cmd -s sol_ok
+    generate gen.cmd -s sol_ok
 
 
 ## Notes

@@ -27,7 +27,7 @@ enable_stdinout_redirection = True
 # specifies how endlines are encoded on the contest testing machines
 # nsuts invokes solutions mainly on Windows platform, hence dos-style is used
 # for Linux-hosted contests, set 'linux' here
-contest_eoln_style = 'dos'
+contest_eoln_style = 'win'
 
 # this function is applied to the time limit extracted from the problem statement
 # you can adjust this function in order to match approximately speed of the testing server

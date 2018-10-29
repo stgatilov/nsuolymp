@@ -1,8 +1,8 @@
 ## Installation
 
 First of all, you should install [Python].
-Both Python 3.5 or Python 2.7 are OK.
-You can download it from official site.
+Python 3.5 is OK. Python 2.7 will probably work.
+You can download Python from official site.
 Note that latest version of Python includes [pip] automatically.
 Both `python` and `pip` should be in PATH.
 
@@ -53,15 +53,16 @@ Here is an example of proper directory structure:
 		sol_sg_slow.cpp			# solutions start with 'sol_'
 		sol_fat_ok.c			#
 	cubes
-		sol_ss_ok				# Java solutions are subdirectories (for nsuts)
+		sol_ss_ok				# Java solutions as subdirectories (deprecated: for old nsuts)
 			Task.java			# starting with 'sol_'
 			Task.class			# and with Task.java|class in it
-		sol_sg_wa.java			# Java solution can be a file too (future of nsuts)
+		sol_sg_wa.java			# Java solution can be a file too (preferred way)
 		validator.cpp
 		testlib.h
 		gen_random.cpp			#
 		gen_spiral.cpp			# generators start with 'gen_'
 		gen_spiral.exe			#
+		gen.cmd					# simple generating script
 
 
 Here are some rules:
@@ -84,12 +85,14 @@ Here are some rules:
 
 8. Each solution's name must start with `sol_`.
 
-9. For nsuts, java solution must be a subdirectory with `Task.java` or/and `Task.class` file in it.
-   Ordinary java files are also supported as solutions (e.g. `sol_tl.java` or/and `sol_tl.class`).
+9. Ordinary java files are supported as solutions (e.g. `sol_tl.java` or/and `sol_tl.class`).
+   With old nsuts, java solution used to be a subdirectory with `Task.java` or/and `Task.class` file in it.
 
 10. Correct solutions which must pass all tests should have `_ok` in their name.
 
 11. Each generator's name must start with `gen_`
+
+12. Simple generating script must use trivial subset of batch, and is usually named `gen.cmd`.
 
 
 ## Samples
@@ -154,11 +157,19 @@ Just run `cool_program.exe` and see how much time/memory it takes:
 
 	runsol cool_program
 
+Generate input test files using the simple-batch script `gen.cmd`:
+
+	generate gen.cmd
+
+Generate tests using the simple-batch script `gen.cmd`, generate outputs using solution `sol_ok`:
+
+	generate gen.cmd -s sol_ok
+
 
 ## Notes
 
-When working on a platform different from the one competition runs on (e.g. preparing Windows contest on Linux),
-you might want to set `validator_eoln_relaxed = True` in `nsuolymp_cfg.py` to avoid [testlib validator issue with EOLNs].
+When working on Linux/Mac, script `validate` automatically normalizes EOLNs on-the-fly to avoid [testlib validator issue with EOLNs].
+To ensure that you commit tests only with windows-style EOLNs, you are recommended to run `fixeoln -w` before commit.
 
 You can customize compilation (compiler parameters and order of preference) in `nsuolymp_cfg.py`.
 

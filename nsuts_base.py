@@ -2,7 +2,7 @@
 
 import requests
 import json
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Tuple, Optional, NamedTuple
 
 class NsutsClient:
     def __init__(self, config):
@@ -98,6 +98,32 @@ class NsutsClient:
         # type: () -> Any
         response = self.request_get('/api/report')
         return json.loads(response.text)['submits']
+
+
+RunResult = NamedTuple('RunResult', [('verdict', str), ('exit_code', int), ('time', float), ('memory', float)])
+def nsuolymp_get_results(nsuts, submit_ids, submit_names):
+    # type: (NsutsClient, List[int], List[str]) -> Optional[List[Tuple[str, List[RunResult]]]]
+    while True:
+        nsuts_results = nsuts.get_my_submits_status()
+        id_to_result = {int(res['id']):res for res in nsuts_results}
+
+        all_ready = True
+        out_results = []
+        for i,sid in enumerate(submit_ids):
+            if sid not in id_to_result.keys():
+                return None
+            res = id_to_result[sid]
+            verdicts = res['result_line']
+            if verdicts is None:
+                all_ready = False
+                break
+            rr = [RunResult(ver, -1, -1.0, -1.0) for ver in verdicts]
+            out_results.append((submit_names[i], rr))
+
+        if all_ready:
+            return out_results
+        time.sleep(1.0)
+
 
 
 def main():

@@ -10,9 +10,9 @@ class NsutsClient:
     # internal
     def get_cookies(self):
         return {
-                'CGISESSID': self.config['session_id'],
-                'PHPSESSID': self.config['session_id']
-               }
+            'CGISESSID': self.config['session_id'],
+            'PHPSESSID': self.config['session_id']
+        }
 
     def request_get(self, path):
         if path[0] != '/':
@@ -25,9 +25,7 @@ class NsutsClient:
 
         return response
         
-
     # public
-
     def is_authorized(self):
         return 'session_id' in self.config
 
@@ -39,7 +37,7 @@ class NsutsClient:
         url = self.config['nsuts'] + '/api/login'
         response = requests.post(url, data)
         if response.status_code != 200:
-            raise Exception('Authorization error: unable to connecto to the server')
+            raise Exception('Authorization error: unable to connect to nsuts')
 
         auth_result = json.loads(response.text)
         if auth_result['success'] != True:

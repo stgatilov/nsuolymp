@@ -36,7 +36,7 @@ def wait_status(nsuts, solutions):
         max_filename_len = max(max_filename_len, len(filename))
     
     while queued + testing > 0:
-        print "Status:"
+        print("Status:")
         queued, testing = 0, 0
 
         submits = nsuts.get_my_submits_status()
@@ -53,7 +53,7 @@ def wait_status(nsuts, solutions):
             else:
                 result = get_verdict_full_name(result[-1])
 
-            print "  " + filename.ljust(max_filename_len, ' ') + " : " + result
+            print("  " + filename.ljust(max_filename_len, ' ') + " : " + result)
 
             if status == 1:
                 queued += 1
@@ -65,17 +65,17 @@ def main(argv = None):
     parser = argparse.ArgumentParser(description = "Submit solutions to NSUTs")
     parser.add_argument('action', type = str, choices = ['submit'])
     parser.add_argument('task', type = int, help = "task id")
-    parser.add_argument('-w', '--wait', help = 'wait and do not exit unitll all solutions will be tested.', action = 'store_true')
+    parser.add_argument('-w', '--wait', help = 'wait and do not exit until all solutions will be tested.', action = 'store_true')
     parser.add_argument('solution', help = "one or several solution source files (* or @ means 'all solutions')", nargs = '+')
     args = parser.parse_args(argv)
 
     nsuts = NsutsClient(nsuts_options)
     nsuts.auth()
     nsuts.select_olympiad(nsuts_options['olympiad_id'])
-    nsuts.select_tour(nsuts_options['tour_id']) 
+    nsuts.select_tour(nsuts_options['tour_id'])
 
     solution_list = args.solution
-    if solution_list == ['@']:
+    if '@' in solution_list or '*' in solution_list:
         solution_list = get_solution_sources()
 
     solution_ids = []
@@ -85,7 +85,7 @@ def main(argv = None):
         solution_ids.append(id)
 
     if args.wait == True:
-        wait_status(nsuts, zip(solution_ids, solution_list))
+        wait_status(nsuts, list(zip(solution_ids, solution_list)))
 
 if __name__ == '__main__':
     sys.exit(main())

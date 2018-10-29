@@ -61,10 +61,10 @@ class NsutsClient:
         response = self.request_get('/select_tour.cgi' + '?tour_to_select=' + str(tour_id))
         # assume everything is ok
 
-    def get_admin_queue(self, limit = 25, tasks = []):
-        # type: (int, List[int]) -> Any
+    def get_admin_queue(self, limit = 25, tasks = None):
+        # type: (int, Optional[List[int]]) -> Any
         url = '/api/submission.php?limit=' + str(limit)
-        if len(tasks) > 0:
+        if tasks is not None:
             url = url + '&task=' + ','.join(map(str, tasks))
         response = self.request_get(url)
         submits = json.loads(response.text)

@@ -86,7 +86,7 @@ def main(argv = None):
             generator = args.stress.split()
             for seed in stress_test_solutions(cfg, generator, solutions_list):
                 stress_results = seed
-                on_error(12)
+                on_error(12, True)
         elif args.gen_output:
             solution = solutions_list[0]
             test_results = [(solution, check_solution(cfg, solution, args.tests, True))]

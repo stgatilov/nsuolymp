@@ -13,9 +13,9 @@ class NsutsClient:
     def get_cookies(self):
         # type: () -> Dict[str, str]
         return {
-            'CGISESSID': self.config['session_id'],
-            'PHPSESSID': self.config['session_id']
-        }
+                'CGISESSID': self.config['session_id'],
+                'PHPSESSID': self.config['session_id']
+               }
 
     def request_get(self, path):
         # type: (str) -> Any
@@ -41,9 +41,9 @@ class NsutsClient:
             'password': self.config['password']
         }
         url = self.config['nsuts'] + '/api/login'
-        response = requests.post(url, data)
+        response = requests.post(url, json = data)
         if response.status_code != 200:
-            raise Exception('Authorization error: unable to connect to nsuts')
+            raise Exception('Authorization error: unable to connect to the server')
 
         auth_result = json.loads(response.text)
         if auth_result['success'] != True:
@@ -72,7 +72,7 @@ class NsutsClient:
     
     def get_solution_source(self, solution_id):
         # type: (int) -> str
-        code = self.request_get('/show.cgi?source=' + str(solution_id)).text    # type: str
+        code = self.request_get('/show.cgi?source=' + str(solution_id)).text # type: str
         start_pos = code.find('<code>')
         return code[start_pos + 6:-13]
 
@@ -96,7 +96,7 @@ class NsutsClient:
 
     def get_my_submits_status(self):
         # type: () -> Any
-        response = self.request_get('/api/report')
+        response = self.request_get('/api/report/get_report')
         return json.loads(response.text)['submits']
 
 
@@ -130,14 +130,14 @@ def main():
     # type: () -> None
     config = {
         # URL is required field in this config
-        'nsuts': 'http://192.168.1.7/nsuts-new',
+        'nsuts': 'http://10.0.3.162/nsuts-new',
 
         # There two ways for authentication in NsuTS
         # 1. Specify email and password
         'email': 'test@test.ru',
         'password': 'test',
         # 2. Specify sessid, which will be assigned after successful authenticaion
-        'session_id': 'cbc5750b24f9b17e3fc77a22fa941a1d',
+        #'session_id': 'cbc5750b24f9b17e3fc77a22fa941a1d',
 
         # Olympid ID and and Tour ID are not using by default, these lines can be omitted
         'olympiad_id': 58,

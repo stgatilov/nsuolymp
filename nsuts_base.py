@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import requests
-import json
-from typing import Any, Dict, List, Tuple, Optional, NamedTuple
+import json, time
+from typing import Any, Dict, List, Tuple, Optional, NamedTuple, Union
 
 class NsutsClient:
     def __init__(self, config):
@@ -77,7 +77,7 @@ class NsutsClient:
         return code[start_pos + 6:-13]
 
     def submit_solution(self, task_id, compiler_name, source_text):
-        # type: (int, str, str) -> None
+        # type: (int, str, Union[bytes,str]) -> None
         data = {
             'lang': compiler_name,
             'task': task_id,

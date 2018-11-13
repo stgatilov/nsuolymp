@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 from nsuolymp import *
-from nsuts_base import *
-import argparse, sys, time
+from nsuts_base import NsutsClient, nsuolymp_get_results
+import argparse, sys, time, json
+from typing import cast
+
 
 def main(argv = None):
     # type: (Optional[List[str]]) -> int
@@ -102,6 +104,10 @@ def main(argv = None):
             if args.local:
                 test_results = check_many_solutions(cfg, solutions_list, args.tests)
             if args.nsuts:
+                if path.isfile('nsuts.json'):
+                    with open('nsuts.json') as f:
+                        for k,v in json.loads(f.read()).items():
+                            nsuts_options[k] = v
                 nsuts = NsutsClient(nsuts_options)
                 if not nsuts.is_authorized():
                     nsuts.auth()
@@ -109,10 +115,14 @@ def main(argv = None):
                 nsuts.select_tour(nsuts_options['tour_id'])
                 ids = []
                 for sol in args.solutions:
-                    nsuts.submit_solution(nsuts_options['task_id'], 'vcc2015', read_file_contents(sol))
-                    ids.append(nsuts.get_my_last_submit_id())
-                    # time.sleep(1)
-                test_results = nsuolymp_get_results(nsuts, ids, args.solutions)
+                    text = read_file_contents(sol)
+                    assert(text is not None)
+                    nsuts.submit_solution(nsuts_options['task_id'], 'vcc2015', text)
+                    subid = nsuts.get_my_last_submit_id()
+                    assert(subid is not None)
+                    ids.append(subid)
+                    time.sleep(1)
+                test_results = cast(Any, nsuolymp_get_results(nsuts, ids, args.solutions))
     except (StopError):
         pass
 

@@ -1361,7 +1361,7 @@ def add_source_to_compile_list(cfg, filename, compile_list, force = False):
         related_files.append(filename)
     related_sources = list(filter(is_source, related_files))
     if len(related_sources) == 0:
-        return filename
+        return filename_noext
     if force:
         compile_list.extend([filename] if is_source(filename) else related_sources)
         return filename_noext
@@ -1371,4 +1371,4 @@ def add_source_to_compile_list(cfg, filename, compile_list, force = False):
     if not (if_exe_exists(filename_noext) or is_solution(filename_noext)):
         compile_list.extend(related_sources)
         return filename
-    return filename
+    return filename_noext

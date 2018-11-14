@@ -23,7 +23,7 @@ default_compiler_order = {
 # NSUTs credentials and contest options
 # required to submits solutions
 nsuts_options = {
-    "nsuts": "http://olympic.nsu.ru/nsuts-new",
+    "nsuts": "https://olympic.nsu.ru/nsuts-new",
 
     # BEWARE: be sure to NOT commit you credentials !
     "email": "user@name.ru",

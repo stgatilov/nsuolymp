@@ -101,8 +101,9 @@ def main(argv = None):
             solution = solutions_list[0]
             test_results = [(solution, check_solution(cfg, solution, args.tests, True))]
         else:
+            test_results = []
             if args.local:
-                test_results = check_many_solutions(cfg, solutions_list, args.tests)
+                test_results = test_results + check_many_solutions(cfg, solutions_list, args.tests)
             if args.nsuts:
                 if path.isfile('nsuts.json'):
                     with open('nsuts.json') as f:
@@ -114,6 +115,7 @@ def main(argv = None):
                 nsuts.select_olympiad(nsuts_options['olympiad_id'])
                 nsuts.select_tour(nsuts_options['tour_id'])
                 ids = []
+                names = []
                 for sol in args.solutions:
                     text = read_file_contents(sol)
                     assert(text is not None)
@@ -121,8 +123,9 @@ def main(argv = None):
                     subid = nsuts.get_my_last_submit_id()
                     assert(subid is not None)
                     ids.append(subid)
-                    time.sleep(1)
-                test_results = cast(Any, nsuolymp_get_results(nsuts, ids, args.solutions))
+                    names.append("%s (%s)" % (sol, 'vcc2015'))
+                    time.sleep(1.1)
+                test_results = test_results + cast(Any, nsuolymp_get_results(nsuts, ids, names))
     except (StopError):
         pass
 

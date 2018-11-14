@@ -109,6 +109,11 @@ def main(argv = None):
                     with open('nsuts.json') as f:
                         for k,v in json.loads(f.read()).items():
                             nsuts_options[k] = v
+                submit_sources = []     # type: List[str]
+                for sol in args.solutions:
+                    add_source_to_compile_list(cfg, sol, submit_sources, True)
+                    if is_interpretable(path.splitext(sol)[0]):
+                        submit_sources.append(sol)
                 nsuts = NsutsClient(nsuts_options)
                 if not nsuts.is_authorized():
                     nsuts.auth()
@@ -116,15 +121,23 @@ def main(argv = None):
                 nsuts.select_tour(nsuts_options['tour_id'])
                 ids = []
                 names = []
-                for sol in args.solutions:
+                for sol in submit_sources:
+                    lang = guess_source_language(sol)
+                    if lang is None:
+                        continue
                     text = read_file_contents(sol)
+                    if lang == 'java dir':
+                        text = read_file_contents(path.join(sol, 'Task.java'))
+                        lang = 'java'
                     assert(text is not None)
-                    nsuts.submit_solution(nsuts_options['task_id'], 'vcc2015', text)
-                    subid = nsuts.get_my_last_submit_id()
-                    assert(subid is not None)
-                    ids.append(subid)
-                    names.append("%s (%s)" % (sol, 'vcc2015'))
-                    time.sleep(1.1)
+                    for compiler in nsuts_options['compiler'][lang]:
+                        printq(cfg.quiet, "Sending %s on %s..." % (sol, compiler))
+                        nsuts.submit_solution(nsuts_options['task_id'], compiler, text)
+                        subid = nsuts.get_my_last_submit_id()
+                        assert(subid is not None)
+                        ids.append(subid)
+                        names.append("%s (%s)" % (sol, compiler))
+                        time.sleep(1.1)
                 test_results = test_results + cast(Any, nsuolymp_get_results(nsuts, ids, names, admin = True))
     except (StopError):
         pass

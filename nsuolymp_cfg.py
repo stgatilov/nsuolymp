@@ -8,6 +8,7 @@ default_compiler_flags = {
     "cl": "/O2 /EHsc",
     "g++": "-O2 -std=gnu++11",
     "gcc": "-O2 -std=c11",
+    "python": "-m py_compile",
 }
 
 # for each language, specify in which order to try compilers to build it
@@ -17,6 +18,7 @@ default_compiler_order = {
     "c": ["cl", "gcc"],
     "pas": ["dcc32", "fpc"],
     "java": ["javac"],
+    "python": ["python"],
 }
 
 # when set to true:

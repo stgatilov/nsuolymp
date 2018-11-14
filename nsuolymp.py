@@ -483,6 +483,8 @@ def guess_source_language(source):
         return 'java'       # javac can be used directly
     elif ext == '' and path.isfile(path.join(source, 'Task.java')):
         return 'java dir'   # directory with Task.java
+    elif ext in ['.py']:
+        return 'python'     # python can be run directly, but we can compile it too
     return None
 
 # returns command-line string which should be used to compile given source

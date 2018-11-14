@@ -25,7 +25,7 @@ class NsutsClient:
         response = requests.get(url, cookies = self.get_cookies())
 
         if response.status_code != 200:
-            raise Exception("Can't change tour")
+            raise Exception("Unknown error during request.")
 
         return response
         

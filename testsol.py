@@ -110,7 +110,7 @@ def main(argv = None):
                         for k,v in json.loads(f.read()).items():
                             nsuts_options[k] = v
                 submit_sources = []     # type: List[str]
-                passed_sols = get_sources_in_problem(solutions = True) if test_all_solutions else args.solutions
+                passed_sols = get_solutions() if test_all_solutions else args.solutions
                 for sol in passed_sols:
                     add_source_to_compile_list(cfg, sol, submit_sources, True)
                     if is_interpretable(path.splitext(sol)[0]):

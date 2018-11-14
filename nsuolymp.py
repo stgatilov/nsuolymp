@@ -428,7 +428,7 @@ def read_filenames(statement_path = None):
 # in case of java, it must be either a java source file or a directory with Task.java in it
 def is_source(f):
     # type: (str) -> bool
-    return path.splitext(f)[1] in ['.cpp', '.c', '.c++', '.cxx', '.pas', '.dpr', '.java'] or path.isfile(path.join(f, 'Task.java'))
+    return path.splitext(f)[1] in ['.cpp', '.c', '.c++', '.cxx', '.pas', '.dpr', '.java', '.py'] or path.isfile(path.join(f, 'Task.java'))
 
 # returns list of generator source files for current problem
 # CWD must be set to problem's directory

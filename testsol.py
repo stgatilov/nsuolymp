@@ -113,8 +113,6 @@ def main(argv = None):
                 passed_sols = get_solutions() if test_all_solutions else args.solutions
                 for sol in passed_sols:
                     add_source_to_compile_list(cfg, sol, submit_sources, True)
-                    if is_interpretable(path.splitext(sol)[0]):
-                        submit_sources.append(sol)
                 nsuts = NsutsClient(nsuts_options)
                 if not nsuts.is_authorized():
                     nsuts.auth()

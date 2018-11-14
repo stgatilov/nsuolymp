@@ -125,7 +125,7 @@ def main(argv = None):
                     ids.append(subid)
                     names.append("%s (%s)" % (sol, 'vcc2015'))
                     time.sleep(1.1)
-                test_results = test_results + cast(Any, nsuolymp_get_results(nsuts, ids, names))
+                test_results = test_results + cast(Any, nsuolymp_get_results(nsuts, ids, names, admin = True))
     except (StopError):
         pass
 

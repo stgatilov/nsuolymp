@@ -63,7 +63,7 @@ class NsutsClient:
 
     def get_admin_queue(self, limit = 25, tasks = None):
         # type: (int, Optional[List[int]]) -> Any
-        url = '/api/submission.php?limit=' + str(limit)
+        url = '/api/queue/submissions?limit=' + str(limit)
         if tasks is not None:
             url = url + '&task=' + ','.join(map(str, tasks))
         response = self.request_get(url)
@@ -101,8 +101,8 @@ class NsutsClient:
 
 
 RunResult = NamedTuple('RunResult', [('verdict', str), ('exit_code', int), ('time', float), ('memory', float)])
-def nsuolymp_get_results(nsuts, submit_ids, submit_names):
-    # type: (NsutsClient, List[int], List[str]) -> Optional[List[Tuple[str, List[RunResult]]]]
+def nsuolymp_get_results(nsuts, submit_ids, submit_names, admin = False):
+    # type: (NsutsClient, List[int], List[str], bool) -> Optional[List[Tuple[str, List[RunResult]]]]
     while True:
         nsuts_results = nsuts.get_my_submits_status()
         id_to_result = {int(res['id']):res for res in nsuts_results}
@@ -121,9 +121,33 @@ def nsuolymp_get_results(nsuts, submit_ids, submit_names):
             out_results.append((submit_names[i], rr))
 
         if all_ready:
-            return out_results
+            break
         time.sleep(1.0)
 
+    if admin:
+        #TODO: request only my own submits
+        nsuts_adminres = nsuts.get_admin_queue(limit = 999)
+        id_to_result = {int(res['id']):res for res in nsuts_adminres["submissions"]}
+
+        out_results = []
+        for i,sid in enumerate(submit_ids):
+            assert(sid in id_to_result.keys())
+            res = id_to_result[sid]
+            verdicts = res['res']
+            assert(verdicts is not None)
+            tnm = json.loads(res['time_and_memory'])
+            rr = []
+            for t,ver in enumerate(verdicts):
+                test_time = -1.0
+                test_memory = -1.0
+                if tnm is not None:
+                    key = str(t+1)
+                    test_time = float(tnm[key]["t"]) * 0.001
+                    test_memory = float(tnm[key]["m"])
+                rr.append(RunResult(ver, -1, test_time, test_memory))
+            out_results.append((submit_names[i], rr))
+
+    return out_results
 
 
 def main():

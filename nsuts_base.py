@@ -135,7 +135,8 @@ def nsuolymp_get_results(nsuts, submit_ids, submit_names, admin = False):
             res = id_to_result[sid]
             verdicts = res['res']
             assert(verdicts is not None)
-            tnm = json.loads(res['time_and_memory'])
+            tnm_json = res['time_and_memory']
+            tnm = json.loads(tnm_json) if tnm_json is not None else None
             rr = []
             for t,ver in enumerate(verdicts):
                 test_time = -1.0

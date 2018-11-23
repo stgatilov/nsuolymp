@@ -38,6 +38,7 @@ nsuts_options = {
 
     "compiler": {
         "cpp": ["vcc2015", "mingw8.1cpp"],
+        "c": ["vc2015"],
         "java": ["java8u101x32"],
         "python": ["python3.6"],
         "pas": ["fpas2.6.4"],

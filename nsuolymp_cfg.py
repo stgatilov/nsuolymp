@@ -25,16 +25,16 @@ default_compiler_order = {
 # NSUTs credentials and contest options
 # required to submits solutions
 nsuts_options = {
+    # may be overriden by contents of nsuts.json in problem directory
     "nsuts": "https://olympic.nsu.ru/nsuts-new",
+    # Note: usually overriden by contents of nsuts.json in problem directory
+    "olympiad_id": 180,
+    "tour_id": 11354,
 
     # BEWARE: be sure to NOT commit you credentials !
     "email": "user@name.ru",
     "password": "securepassword",
     "session_id": "5c4d2b5a372ca8770923449e286f24a5",
-
-    # Note: usualy overriden by contents of nsuts.json in problem directory
-    "olympiad_id": 180,
-    "tour_id": 11354,
 
     "compiler": {
         "cpp": ["vcc2015", "mingw8.1cpp"],

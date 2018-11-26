@@ -36,7 +36,7 @@ nsuts_options = {
     "password": "securepassword",
     "session_id": "5c4d2b5a372ca8770923449e286f24a5",
 
-    "compiler": {
+    "compilers": {
         "cpp": ["vcc2015", "mingw8.1cpp"],
         "c": ["vc2015"],
         "java": ["java8u101x32"],

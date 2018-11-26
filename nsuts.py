@@ -19,7 +19,7 @@ def submit(nsuts, task, filename):
     if ext == 'java dir':
         ext = 'java'
         filename = path.join(filename, 'Task.java')
-    compiler = nsuts_options['compiler'][ext]
+    compiler = nsuts_options['compilers'][ext][0]
 
     with open(filename) as source_file:
         source_code = source_file.read()

@@ -129,7 +129,7 @@ def main(argv = None):
                         text = read_file_contents(path.join(sol, 'Task.java'))
                         lang = 'java'
                     assert(text is not None)
-                    for compiler in nsuts_options['compiler'][lang]:
+                    for compiler in nsuts_options['compilers'][lang]:
                         printq(cfg.quiet, "Sending %s on %s..." % (sol, compiler))
                         nsuts.submit_solution(nsuts_options['task_id'], compiler, text)
                         subid = nsuts.get_my_last_submit_id()

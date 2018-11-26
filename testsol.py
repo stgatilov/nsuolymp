@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 from nsuolymp import *
-import argparse, sys
+from nsuts_base import NsutsClient, nsuolymp_get_results
+import argparse, sys, time, json
+from typing import cast
+
 
 def main(argv = None):
     # type: (Optional[List[str]]) -> int
@@ -15,6 +18,8 @@ def main(argv = None):
     parser.add_argument('-t', '--tl', help = "specify time limit in seconds (by default taken from problem statement, 0 means 'no limit')", type = float)
     parser.add_argument('-m', '--ml', help = "specify memory limit in megabytes (by default taken from problem statement, 0 means 'no limit')", type = float)
     parser.add_argument('-i', '--tests', help = "comma-separated list of test names/globs/ranges to run on (by default all tests are used)", metavar = "TESTS")
+    parser.add_argument('--nsuts', help = "test solutions on the remote nsuts testing server", action = "store_true")
+    parser.add_argument('--local', help = "test solutions locally (default)", action = "store_true")
     args = parser.parse_args()
 
     test_all_solutions = ('*' in args.solutions or '@' in args.solutions)
@@ -25,6 +30,11 @@ def main(argv = None):
         if test_all_solutions or len(args.solutions) != 1:
             print("Exactly one solution must be specified with --gen-output")
             return 201
+    if args.nsuts and (args.stress or args.gen_output):
+        print("Some options are incompatible with --nsuts")
+        return 202
+    if not args.local and not args.nsuts:
+        args.local = True
 
     cfg = Config(quiet = args.quiet, stop = args.stop_on_error)
     # resolve limits
@@ -91,7 +101,43 @@ def main(argv = None):
             solution = solutions_list[0]
             test_results = [(solution, check_solution(cfg, solution, args.tests, True))]
         else:
-            test_results = check_many_solutions(cfg, solutions_list, args.tests)
+            test_results = []
+            if args.local:
+                test_results = test_results + check_many_solutions(cfg, solutions_list, args.tests)
+            if args.nsuts:
+                if path.isfile('nsuts.json'):
+                    with open('nsuts.json') as f:
+                        for k,v in json.loads(f.read()).items():
+                            nsuts_options[k] = v
+                submit_sources = []     # type: List[str]
+                passed_sols = get_solutions() if test_all_solutions else args.solutions
+                for sol in passed_sols:
+                    add_source_to_compile_list(cfg, sol, submit_sources, True)
+                nsuts = NsutsClient(nsuts_options)
+                if not nsuts.is_authorized():
+                    nsuts.auth()
+                nsuts.select_olympiad(nsuts_options['olympiad_id'])
+                nsuts.select_tour(nsuts_options['tour_id'])
+                ids = []
+                names = []
+                for sol in submit_sources:
+                    lang = guess_source_language(sol)
+                    if lang is None:
+                        continue
+                    text = read_file_contents(sol)
+                    if lang == 'java dir':
+                        text = read_file_contents(path.join(sol, 'Task.java'))
+                        lang = 'java'
+                    assert(text is not None)
+                    for compiler in nsuts_options['compilers'][lang]:
+                        printq(cfg.quiet, "Sending %s on %s..." % (sol, compiler))
+                        nsuts.submit_solution(nsuts_options['task_id'], compiler, text)
+                        subid = nsuts.get_my_last_submit_id()
+                        assert(subid is not None)
+                        ids.append(subid)
+                        names.append("%s (%s)" % (sol, compiler))
+                        time.sleep(1.1)
+                test_results = test_results + cast(Any, nsuolymp_get_results(nsuts, ids, names, admin = True))
     except (StopError):
         pass
 

@@ -1,3 +1,4 @@
+from typing import Dict, Any
 # some user preferences can be set here
 
 # for each compiler, specify flags added to command line
@@ -20,6 +21,29 @@ default_compiler_order = {
     "java": ["javac"],
     "python": ["python"],
 }
+
+# NSUTs credentials and contest options
+# required to submits solutions
+nsuts_options = {
+    # may be overriden by contents of nsuts.json in problem directory
+    "nsuts": "https://olympic.nsu.ru/nsuts-new",
+    # Note: usually overriden by contents of nsuts.json in problem directory
+    "olympiad_id": 180,
+    "tour_id": 11354,
+
+    # BEWARE: be sure to NOT commit you credentials !
+    "email": "user@name.ru",
+    "password": "securepassword",
+    "session_id": "5c4d2b5a372ca8770923449e286f24a5",
+
+    "compilers": {
+        "cpp": ["vcc2015", "mingw8.1cpp"],
+        "c": ["vc2015"],
+        "java": ["java8u101x32"],
+        "python": ["python3.6"],
+        "pas": ["fpas2.6.4"],
+    },
+} # type: Dict[str, Any]
 
 # when set to true:
 # 1. input file is additionally passed to stdin

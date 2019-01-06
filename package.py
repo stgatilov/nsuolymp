@@ -11,6 +11,7 @@ def main(argv = None):
     parser.add_argument('--no-validator', help = "skip checking tests with validator", action = "store_true")
     parser.add_argument('--no-samples', help = "skip checking first tests against samples from statement", action = "store_true")
     parser.add_argument('--path', help = "path to output zip-file or directory (by default _packages in contest dir)", metavar = "PATH")
+    parser.add_argument('--password', help = "protect the resulting zip package with specified password")
     args = parser.parse_args(argv)
 
     args.compile = not args.no_compile
@@ -61,7 +62,7 @@ def main(argv = None):
         output_filename = path.join(output_filename, problem_name + '.zip')
 
     # finally, create archive
-    ok = create_flat_zip(packed_file_list, output_filename, quiet = args.quiet)
+    ok = create_flat_zip(packed_file_list, output_filename, quiet = args.quiet, password = args.password)
     if not ok:
         return 13
 

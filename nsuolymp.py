@@ -799,8 +799,8 @@ def find_7zip():
 # quiet - if True, then output to console is suppressed
 # note: may break for lengthy file list due to OS limit on cmd length (8K-32K)
 # returns True on success, False on fail
-def create_flat_zip(input_files, output_file, quiet = False, level = 3):
-    # type: (List[str], str, bool, int) -> bool
+def create_flat_zip(input_files, output_file, quiet = False, level = 3, password = None):
+    # type: (List[str], str, bool, int, Optional[str]) -> bool
     if path.isfile(output_file):
         os.remove(output_file)
     executable = find_7zip()
@@ -814,6 +814,8 @@ def create_flat_zip(input_files, output_file, quiet = False, level = 3):
         return path.join('./', f)
     dot_inputs = map(dot_path, input_files)
     cmdline = "%s a -tzip -y -mx=%d %s %s" % (executable, level, output_file, ' '.join(dot_inputs))
+    if password is not None:
+        cmdline += ' -p%s' % password
     err = cmd_runner(quiet)(cmdline).returncode
     return err == 0
 

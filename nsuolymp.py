@@ -29,6 +29,12 @@ def copyfile(src, dst):
     if path.abspath(src) == path.abspath(dst):
         return
     shutil.copyfile(src, dst)
+        
+# wrapper for deleting files
+def removefile(fn):
+    # type: (str) -> None
+    if path.isfile(fn):
+        os.remove(fn)
 
 # context manager to restore CWD easily
 class save_cwd():
@@ -725,8 +731,10 @@ def controlled_run_solution(solution, time_limit, memory_limit, interactive, qui
         with cmin as fin:
             cmout = open("_stdout_", "wb") if enable_stdinout_redirection else null_context(None)   # type: Any
             with cmout as fout:
-                process = psutil.Popen(popen_args, stdin = fin, stdout = fout)
-                res = control_processes_execution([process], [time_limit], [corrected_memory_limit], None, quiet)
+                cmerr = open("_stderr_", "wb") if enable_stderr_redirection else null_context(None) # type: Any
+                with cmerr as ferr:
+                    process = psutil.Popen(popen_args, stdin = fin, stdout = fout, stderr = ferr)
+                    res = control_processes_execution([process], [time_limit], [corrected_memory_limit], None, quiet)
         return res[0]
 
 ############################## Diffs and checkers ##############################

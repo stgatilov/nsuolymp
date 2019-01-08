@@ -49,6 +49,8 @@ nsuts_options = {
 # 1. input file is additionally passed to stdin
 # 2. stdout is redirected to temp file, and it is taken instead of file if file is absent/empty
 enable_stdinout_redirection = True
+# when set to true, stderr is also redirected to temp file (usually not needed)
+enable_stderr_redirection = False
 
 # specifies how endlines are encoded on the contest testing machines
 # nsuts invokes solutions mainly on Windows platform, hence dos-style is used

@@ -6,6 +6,7 @@ default_compiler_flags = {
     "dcc32": "-cc",
     "fpc": "-O2",
     "javac": "",
+    "kotlinc": "",
     "cl": "/O2 /EHsc",
     "g++": "-O2 -std=gnu++11",
     "gcc": "-O2 -std=c11",
@@ -19,6 +20,7 @@ default_compiler_order = {
     "c": ["cl", "gcc"],
     "pas": ["dcc32", "fpc"],
     "java": ["javac"],
+    "kotlin": ["kotlinc"],
     "python": ["python"],
 }
 
@@ -40,6 +42,7 @@ nsuts_options = {
         "cpp": ["vcc2015", "mingw8.1cpp"],
         "c": ["vc2015", "mingw8.1c"],
         "java": ["java8u101x32"],
+        "kotlin": ["kotlinc"],
         "python": ["python3.6"],
         "pas": ["fpas2.6.4"],
     },

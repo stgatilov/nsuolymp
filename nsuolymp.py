@@ -142,6 +142,11 @@ def if_test_passes_filter(test, filter_str):
 
 ########################## Solutions and executables ###########################
 
+# It seems that most programming languages fall into one of three categories:
+# 1. compile into executable and run it directly (e.g. C/C++)
+# 2. compile into bytecode and execute language runtime with it (e.g. Java/Kotlin)
+# 3. execute interpreter with source code (e.g. Python)
+
 # returns whether an executable file with given name (path) exists
 # f must not have extension; checks for both f and f.exe
 def if_exe_exists(f):
@@ -157,6 +162,11 @@ def is_java_class(f):
 def has_java_task(f):
     # type: (str) -> bool
     return path.isdir(f) and path.isfile(path.join(f, 'Task.class'))
+
+# returns whether the given file is a jar archive, runnable with JVM (used for Kotlin)
+def is_java_jar(f):
+    # type: (str) -> bool
+    return path.isfile(f + '.jar')
 
 # returns whether there is python source file with given name
 def is_python_source(f):
@@ -174,10 +184,11 @@ def is_interpretable(f):
 # in case of java, it is one of:
 #   class file with .class extension    (proper way)
 #   a directory with Task.class in it   (for old nsuts)
+# in case of Kotlin, it is a jar file
 # in case of python or similar, it must be the source file itself
 def is_solution(f):
     # type: (str) -> bool
-    return if_exe_exists(f) or is_java_class(f) or has_java_task(f) or is_interpretable(f)
+    return if_exe_exists(f) or is_java_class(f) or has_java_task(f) or is_java_jar(f) or is_interpretable(f)
 
 # returns list of solutions for current problem
 # CWD must be set to problem's directory
@@ -434,7 +445,7 @@ def read_filenames(statement_path = None):
 # in case of java, it must be either a java source file or a directory with Task.java in it
 def is_source(f):
     # type: (str) -> bool
-    return path.splitext(f)[1] in ['.cpp', '.c', '.c++', '.cxx', '.pas', '.dpr', '.java', '.py'] or path.isfile(path.join(f, 'Task.java'))
+    return path.splitext(f)[1] in ['.cpp', '.c', '.c++', '.cxx', '.pas', '.dpr', '.java', '.kt', '.py'] or path.isfile(path.join(f, 'Task.java'))
 
 # returns list of generator source files for current problem
 # CWD must be set to problem's directory
@@ -489,6 +500,8 @@ def guess_source_language(source):
         return 'java'       # javac can be used directly
     elif ext == '' and path.isfile(path.join(source, 'Task.java')):
         return 'java dir'   # directory with Task.java
+    elif ext in ['.kt']:
+        return 'kotlin'     # kotlinc applied directly
     elif ext in ['.py']:
         return 'python'     # python can be run directly, but we can compile it too
     return None
@@ -503,9 +516,16 @@ def get_compile_cmd(source_local, compiler, compiler_flags):
         return None
     if not if_command_exists(compiler):
         return None
-    cmd = '%s %s %s' % (compiler, compiler_flags.get(compiler), source_local);
+    compiler_exe = compiler
+    if (compiler_exe == 'kotlinc' and os.name == 'nt'):
+        full_path = get_command_path('kotlinc.bat') # kotlinc is bat on Windows, and subprocess needs absolute path to run it
+        if full_path is not None:
+            compiler_exe = full_path
+    cmd = '%s %s %s' % (compiler_exe, compiler_flags.get(compiler), source_local);
     if compiler == 'g++' or compiler == 'gcc':
         cmd += ' -o %s' % path.splitext(source_local)[0]
+    if compiler == 'kotlinc':
+        cmd += ' -include-runtime -d %s.jar' % path.splitext(source_local)[0]
     return cmd
 
 # compiles a given source code file (in its directory)
@@ -685,10 +705,12 @@ def controlled_run_solution(solution, time_limit, memory_limit, interactive, qui
     elif if_exe_exists(solution):
         solution_path = solution if os.name == 'nt' else path.join('./', solution)
         popen_args = solution_path
-    elif is_java_class(solution) or has_java_task(solution):
+    elif is_java_class(solution) or has_java_task(solution) or is_java_jar(solution):
         heap_size_key = '-Xmx1G' if memory_limit is None else '-Xmx%dM' % int(memory_limit)
         corrected_memory_limit = None
         popen_args = ['java', heap_size_key, '-Xms64M', '-Xss32M', '-Duser.country=US', '-Duser.language=en']
+        if is_java_jar(solution):
+            popen_args += ['-jar', solution + '.jar']
         if is_java_class(solution):
             popen_args += [path.splitext(solution)[0]]
         elif has_java_task(solution):

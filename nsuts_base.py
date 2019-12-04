@@ -9,6 +9,10 @@ class NsutsClient:
         # type: (Dict[str, Any]) -> None
         self.config = config
 
+    def do_verify(self):
+        # type: () -> bool
+        return self.config.get('verify', True)
+
     # internal
     def get_cookies(self):
         # type: () -> Dict[str, str]
@@ -22,7 +26,7 @@ class NsutsClient:
         if path[0] != '/':
             path = '/' + path
         url = self.config['nsuts'] + path
-        response = requests.get(url, cookies = self.get_cookies())
+        response = requests.get(url, cookies = self.get_cookies(), verify = self.do_verify())
 
         if response.status_code != 200:
             raise Exception("Unknown error during request.")
@@ -41,7 +45,7 @@ class NsutsClient:
             'password': self.config['password']
         }
         url = self.config['nsuts'] + '/api/login'
-        response = requests.post(url, json = data)
+        response = requests.post(url, json = data, verify = self.do_verify())
         if response.status_code != 200:
             raise Exception('Authorization error: unable to connect to nsuts')
 
@@ -84,7 +88,7 @@ class NsutsClient:
             'text': source_text
         }
         url = self.config['nsuts'] + '/submit.cgi?submit=1'
-        response = requests.post(url, cookies = self.get_cookies(), data = data)
+        response = requests.post(url, cookies = self.get_cookies(), data = data, verify = self.do_verify())
 
     def get_my_last_submit_id(self):
         # type: () -> Optional[int]

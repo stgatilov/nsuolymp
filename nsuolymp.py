@@ -749,9 +749,9 @@ def controlled_run_solution(solution, time_limit, memory_limit, interactive, qui
         return sol_res._replace(verdict = exitcode_verdict)
     else:
         proclaim_process_runs([popen_args], [time_limit], [corrected_memory_limit], quiet)
-        cmin = open("input.txt", "rb") if enable_stdinout_redirection else null_context(None)       # type: Any
+        cmin = open("input.txt", "rb") if enable_stdin_redirection else null_context(None)       # type: Any
         with cmin as fin:
-            cmout = open("_stdout_", "wb") if enable_stdinout_redirection else null_context(None)   # type: Any
+            cmout = open("_stdout_", "wb") if enable_stdout_redirection else null_context(None)   # type: Any
             with cmout as fout:
                 cmerr = open("_stderr_", "wb") if enable_stderr_redirection else null_context(None) # type: Any
                 with cmerr as ferr:
@@ -896,7 +896,7 @@ def check_solution_on_test(cfg, solution, input_file, gen_output = False):
     if path.isfile(out_fn):
         copyfile(out_fn, 'output.txt')
 
-    if enable_stdinout_redirection:
+    if enable_stdout_redirection:
         if getfilesize('_stdout_') == 0:
             os.remove('_stdout_')
         if getfilesize('output.txt') <= 0 and getfilesize('_stdout_') > 0:

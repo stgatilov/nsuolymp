@@ -48,10 +48,10 @@ nsuts_options = {
     },
 } # type: Dict[str, Any]
 
-# when set to true:
-# 1. input file is additionally passed to stdin
-# 2. stdout is redirected to temp file, and it is taken instead of file if file is absent/empty
-enable_stdinout_redirection = True
+# when set to true, input file is additionally passed to stdin
+enable_stdin_redirection = True
+# when set to true, stdout is redirected to temp file, and it is taken instead of file if file is absent/empty
+enable_stdout_redirection = True
 # when set to true, stderr is also redirected to temp file (usually not needed)
 enable_stderr_redirection = False
 

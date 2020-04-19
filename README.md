@@ -1,3 +1,5 @@
+*Migrated from: https://bitbucket.org/stgatilov/nsuolymp/*
+
 ## Installation
 
 First of all, you should install [Python].

@@ -29,7 +29,7 @@ class NsutsClient:
         response = requests.get(url, cookies = self.get_cookies(), verify = self.do_verify())
 
         if response.status_code != 200:
-            raise Exception("Unknown error during request.")
+            raise Exception("Can't change tour")
 
         return response
         
@@ -47,7 +47,7 @@ class NsutsClient:
         url = self.config['nsuts'] + '/api/login'
         response = requests.post(url, json = data, verify = self.do_verify())
         if response.status_code != 200:
-            raise Exception('Authorization error: unable to connect to nsuts')
+            raise Exception('Authorization error: unable to connect to the server')
 
         auth_result = json.loads(response.text)
         if auth_result['success'] != True:
@@ -83,11 +83,11 @@ class NsutsClient:
     def submit_solution(self, task_id, compiler_name, source_text):
         # type: (int, str, Union[bytes,str]) -> None
         data = {
-            'lang': compiler_name,
-            'task': task_id,
-            'text': source_text
+            'langId': compiler_name,
+            'taskId': task_id,
+            'sourceText': source_text
         }
-        url = self.config['nsuts'] + '/submit.cgi?submit=1'
+        url = self.config['nsuts'] + '/api/submit/do_submit'
         response = requests.post(url, cookies = self.get_cookies(), data = data, verify = self.do_verify())
 
     def get_my_last_submit_id(self):

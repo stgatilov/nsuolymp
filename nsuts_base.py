@@ -114,8 +114,7 @@ class NsutsClient:
             'taskId': task_id,
             'sourceText': source_text
         }
-        url = self.config['nsuts'] + '/api/submit/do_submit'
-        response = requests.post(url, cookies = self.get_cookies(), data = data, verify = self.do_verify())
+        response = self.request_post('/api/submit/do_submit', data)
 
     def get_my_last_submit_id(self):
         # type: () -> Optional[int]

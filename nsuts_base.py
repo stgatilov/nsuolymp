@@ -78,7 +78,11 @@ class NsutsClient:
 
     def select_olympiad(self, olympiad_id):
         # type: (int) -> None
-        response = self.request_get('/select_olympiad.cgi' + '?olympiad=' + str(olympiad_id))
+        data = {
+            'olympiad': str(olympiad_id)
+        }
+        response = self.request_post('/api/olympiads/enter', data)
+
         now_olympiad = self.get_state()['olympiad_id']
         assert str(now_olympiad) == str(olympiad_id), "Failed to change olympiad ID: have %s instead of %s" % (str(now_olympiad), str(olympiad_id))
 

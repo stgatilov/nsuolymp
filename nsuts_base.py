@@ -33,14 +33,16 @@ class NsutsClient:
         response.raise_for_status()
         return response
 
-    def request_post(self, path, data):
-        # type: (str, Dict[str, Any]) -> Any
+    def request_post(self, path, data, is_json = True):
+        # type: (str, Dict[str, Any], bool) -> Any
         if path[0] != '/':
             path = '/' + path
         url = self.config['nsuts'] + path
 
-        cookies = self.get_cookies() if 'session_id' in self.config else None
-        response = requests.post(url, json = data, cookies = cookies, verify = self.do_verify())
+        xcookies = self.get_cookies() if 'session_id' in self.config else None
+        xdata = None if is_json else data
+        xjson = data if is_json else None
+        response = requests.post(url, data = xdata, json = xjson, cookies = xcookies, verify = self.do_verify())
 
         response.raise_for_status()
         return response
@@ -114,7 +116,7 @@ class NsutsClient:
             'taskId': task_id,
             'sourceText': source_text
         }
-        response = self.request_post('/api/submit/do_submit', data)
+        response = self.request_post('/api/submit/do_submit', data, is_json = False)
 
     def get_my_last_submit_id(self):
         # type: () -> Optional[int]

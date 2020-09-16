@@ -32,7 +32,17 @@ class NsutsClient:
             raise Exception("Can't change tour")
 
         return response
-        
+
+    def get_state(self):
+        # type: () -> Any
+        response = self.request_get('/api/config')
+        response.raise_for_status()
+        state = response.json()
+        have_url = self.config['nsuts'].rstrip('/')
+        wanted_url = state['nsuts'].rstrip('/')
+        assert have_url == wanted_url, "Unexpected content of API config json: %s" % str(state)
+        return state
+
     # public
     def is_authorized(self):
         # type: () -> bool
@@ -58,12 +68,14 @@ class NsutsClient:
     def select_olympiad(self, olympiad_id):
         # type: (int) -> None
         response = self.request_get('/select_olympiad.cgi' + '?olympiad=' + str(olympiad_id))
-        # assume everything is ok
+        now_olympiad = self.get_state()['olympiad_id']
+        assert str(now_olympiad) == str(olympiad_id), "Failed to change olympiad ID: have %s instead of %s" % (str(now_olympiad), str(olympiad_id))
 
     def select_tour(self, tour_id):
         # type: (int) -> None
         response = self.request_get('/select_tour.cgi' + '?tour_to_select=' + str(tour_id))
-        # assume everything is ok
+        now_tour = self.get_state()['tour_id']
+        assert str(now_tour) == str(tour_id), "Failed to change tour ID: have %s instead of %s" % (str(now_tour), str(tour_id))
 
     def get_admin_queue(self, limit = 25, tasks = None):
         # type: (int, Optional[List[int]]) -> Any

@@ -9,11 +9,12 @@ class NsutsClient:
         # type: (Dict[str, Any]) -> None
         self.config = config
 
+    # internal (TODO: start names of private methods with underscore)
+
     def do_verify(self):
         # type: () -> bool
         return self.config.get('verify', True)
 
-    # internal
     def get_cookies(self):
         # type: () -> Dict[str, str]
         return {
@@ -26,24 +27,37 @@ class NsutsClient:
         if path[0] != '/':
             path = '/' + path
         url = self.config['nsuts'] + path
+
         response = requests.get(url, cookies = self.get_cookies(), verify = self.do_verify())
 
-        if response.status_code != 200:
-            raise Exception("Can't change tour")
+        response.raise_for_status()
+        return response
 
+    def request_post(self, path, data):
+        # type: (str, Dict[str, Any]) -> Any
+        if path[0] != '/':
+            path = '/' + path
+        url = self.config['nsuts'] + path
+
+        cookies = self.get_cookies() if 'session_id' in self.config else None
+        response = requests.post(url, json = data, cookies = cookies, verify = self.do_verify())
+
+        response.raise_for_status()
         return response
 
     def get_state(self):
         # type: () -> Any
         response = self.request_get('/api/config')
-        response.raise_for_status()
         state = response.json()
+
         have_url = self.config['nsuts'].rstrip('/')
-        wanted_url = state['nsuts'].rstrip('/')
-        assert have_url == wanted_url, "Unexpected content of API config json: %s" % str(state)
+        want_url = state['nsuts'].rstrip('/')
+        assert have_url == want_url, "Unexpected server address in API config json: %s" % str(state)
+
         return state
 
     # public
+
     def is_authorized(self):
         # type: () -> bool
         return 'session_id' in self.config
@@ -54,16 +68,13 @@ class NsutsClient:
             'email': self.config['email'],
             'password': self.config['password']
         }
-        url = self.config['nsuts'] + '/api/login'
-        response = requests.post(url, json = data, verify = self.do_verify())
-        if response.status_code != 200:
-            raise Exception('Authorization error: unable to connect to the server')
+        response = self.request_post('/api/login', data)
+        auth_result = response.json()
 
-        auth_result = json.loads(response.text)
-        if auth_result['success'] != True:
-            raise Exception('Authorization error: ' + auth_result['error'])
-
+        assert auth_result['success'] == True, "Authorization error: %s" % auth_result['error']
         self.config['session_id'] = auth_result['sessid']
+
+        assert self.get_state()['session_id'] == self.config['session_id'], "Session ID not saved"
 
     def select_olympiad(self, olympiad_id):
         # type: (int) -> None

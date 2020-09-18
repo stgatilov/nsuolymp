@@ -833,8 +833,7 @@ def find_7zip():
 # returns True on success, False on fail
 def create_flat_zip(input_files, output_file, quiet = False, level = 3, password = None):
     # type: (List[str], str, bool, int, Optional[str]) -> bool
-    if path.isfile(output_file):
-        os.remove(output_file)
+    removefile(output_file)
     executable = find_7zip()
     if executable is None:
         printq(quiet, "7-Zip not found")
@@ -888,10 +887,8 @@ def check_solution_on_test(cfg, solution, input_file, gen_output = False):
     # type: (Config, str, str, bool) -> RunResult
     assert(path.dirname(path.abspath(solution)) == path.abspath(os.getcwd()))
     copyfile(input_file, 'input.txt')
-    if path.isfile('output.txt'):
-        os.remove('output.txt')
-    if path.isfile('answer.txt'):
-        os.remove('answer.txt')
+    removefile('output.txt')
+    removefile('answer.txt')
     interactive = if_exe_exists('interactor')
     if path.isfile(get_output_by_input(input_file)):
         copyfile(get_output_by_input(input_file), 'answer.txt')

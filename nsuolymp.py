@@ -724,6 +724,8 @@ def controlled_run_solution(solution, time_limit, memory_limit, interactive, qui
     if interactive:
         interactor_name = 'interactor'
         interactor_args = [interactor_name if os.name == 'nt' else path.join('./', interactor_name), 'input.txt', 'output.txt']
+        if path.isfile('answer.txt'):
+            interactor_args.append('answer.txt')
         args_list = [interactor_args, popen_args]
         TLs = [time_limit * 2 + 5, time_limit] if time_limit is not None else [None, None]                  # type: List[Optional[float]]
         MLs = [memory_limit + 256, corrected_memory_limit] if memory_limit is not None else [None, None]    # type: List[Optional[float]]
@@ -888,7 +890,11 @@ def check_solution_on_test(cfg, solution, input_file, gen_output = False):
     copyfile(input_file, 'input.txt')
     if path.isfile('output.txt'):
         os.remove('output.txt')
+    if path.isfile('answer.txt'):
+        os.remove('answer.txt')
     interactive = if_exe_exists('interactor')
+    if path.isfile(get_output_by_input(input_file)):
+        copyfile(get_output_by_input(input_file), 'answer.txt')
 
     (in_fn, out_fn) = read_filenames()
     copyfile('input.txt', in_fn)

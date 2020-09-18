@@ -1193,6 +1193,7 @@ def stress_test_solutions(cfg, generator_args, solutions):
         test = subprocess.check_output(seeded_args)
         with open(test_name, 'wb') as f:
             f.write(test)
+        removefile(get_output_by_input(test_name))
         if do_validate and not validate_test(test_name, True):
             printq(quiet, colored_verdict('R', "Invalid input on seed ") + str(gen_seed))
             yield gen_seed

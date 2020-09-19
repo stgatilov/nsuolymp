@@ -14,6 +14,7 @@ Now you should make sure all packages used by *nsuolymp* are installed, run e.g.
     pip install psutil
     pip install colorama
     pip install typing
+    pip install requests        # only used for "testsol --nsuts"
 
 On Windows, you'd better add `.PY` extension to PATHEXT environment variable globally.
 On POSIX, you should mark all scripts with shebang as executable (with `chmod`).

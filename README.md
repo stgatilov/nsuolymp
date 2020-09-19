@@ -168,6 +168,10 @@ Generate tests using the simple-batch script `gen.cmd`, generate outputs using s
 
     generate gen.cmd -s sol_ok
 
+Remove intermediate files like `input.txt`, `stress_test.in` and binaries like `sol_ok.exe`:
+
+    wipe -ic
+
 
 ## Notes
 

@@ -50,8 +50,11 @@ def main(argv = None):
 
     # pack input/output test files
     packed_file_list += get_tests_inputs()
-    if not if_exe_exists('interactor'):
-        packed_file_list += map(get_output_by_input, get_tests_inputs())
+    test_outputs = list(map(get_output_by_input, get_tests_inputs()))
+    if if_exe_exists('interactor'):
+        if all([not path.isfile(outfn) for outfn in test_outputs]):
+            test_outputs = []   # interaction problems often miss outputs
+    packed_file_list += test_outputs
 
     # deduce path to output archive
     output_filename = args.path

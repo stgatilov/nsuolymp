@@ -10,6 +10,7 @@ def main(argv = None):
     parser.add_argument('range', help = "range of tests with 'minus' in-between (or several comma-separated ranges)")
     parser.add_argument('shift', help = "the number of each test will be increased by this shift (may be negative)")
     parser.add_argument('--svn', help = "rename using 'svn rename'", action = "store_true")
+    parser.add_argument('--hg', help = "rename using 'hg rename'", action = "store_true")
     parser.add_argument('-q', '--quiet', help = "print only results (no intermediate messages)", action = "store_true")
     args = parser.parse_args()
 
@@ -52,10 +53,11 @@ def main(argv = None):
         # type: (str, str) -> None
         fr_o = get_output_by_input(fr)
         to_o = get_output_by_input(to)
-        if args.svn:
-            os.system('svn rename %s %s' % (fr, to))
+        if args.svn or args.hg:
+            vcs = 'svn' if args.svn else 'hg'
+            os.system('%s rename %s %s' % (vcs, fr, to))
             if path.isfile(fr_o):
-                os.system('svn rename %s %s' % (fr_o, to_o))
+                os.system('%s rename %s %s' % (vcs, fr_o, to_o))
         else:
             os.rename(fr, to)
             if path.isfile(fr_o):

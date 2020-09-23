@@ -9,11 +9,12 @@ class NsutsClient:
         # type: (Dict[str, Any]) -> None
         self.config = config
 
+    # internal (TODO: start names of private methods with underscore)
+
     def do_verify(self):
         # type: () -> bool
         return self.config.get('verify', True)
 
-    # internal
     def get_cookies(self):
         # type: () -> Dict[str, str]
         return {
@@ -26,14 +27,39 @@ class NsutsClient:
         if path[0] != '/':
             path = '/' + path
         url = self.config['nsuts'] + path
+
         response = requests.get(url, cookies = self.get_cookies(), verify = self.do_verify())
 
-        if response.status_code != 200:
-            raise Exception("Unknown error during request.")
-
+        response.raise_for_status()
         return response
-        
+
+    def request_post(self, path, data, is_json = True):
+        # type: (str, Dict[str, Any], bool) -> Any
+        if path[0] != '/':
+            path = '/' + path
+        url = self.config['nsuts'] + path
+
+        xcookies = self.get_cookies() if 'session_id' in self.config else None
+        xdata = None if is_json else data
+        xjson = data if is_json else None
+        response = requests.post(url, data = xdata, json = xjson, cookies = xcookies, verify = self.do_verify())
+
+        response.raise_for_status()
+        return response
+
+    def get_state(self):
+        # type: () -> Any
+        response = self.request_get('/api/config')
+        state = response.json()
+
+        have_url = self.config['nsuts'].rstrip('/')
+        want_url = state['nsuts'].rstrip('/')
+        assert have_url == want_url, "Unexpected server address in API config json: %s" % str(state)
+
+        return state
+
     # public
+
     def is_authorized(self):
         # type: () -> bool
         return 'session_id' in self.config
@@ -44,26 +70,29 @@ class NsutsClient:
             'email': self.config['email'],
             'password': self.config['password']
         }
-        url = self.config['nsuts'] + '/api/login'
-        response = requests.post(url, json = data, verify = self.do_verify())
-        if response.status_code != 200:
-            raise Exception('Authorization error: unable to connect to nsuts')
+        response = self.request_post('/api/login', data)
+        auth_result = response.json()
 
-        auth_result = json.loads(response.text)
-        if auth_result['success'] != True:
-            raise Exception('Authorization error: ' + auth_result['error'])
-
+        assert auth_result['success'] == True, "Authorization error: %s" % auth_result['error']
         self.config['session_id'] = auth_result['sessid']
+
+        assert self.get_state()['session_id'] == self.config['session_id'], "Session ID not saved"
 
     def select_olympiad(self, olympiad_id):
         # type: (int) -> None
-        response = self.request_get('/select_olympiad.cgi' + '?olympiad=' + str(olympiad_id))
-        # assume everything is ok
+        data = {
+            'olympiad': str(olympiad_id)
+        }
+        response = self.request_post('/api/olympiads/enter', data)
+
+        now_olympiad = self.get_state()['olympiad_id']
+        assert str(now_olympiad) == str(olympiad_id), "Failed to change olympiad ID: have %s instead of %s" % (str(now_olympiad), str(olympiad_id))
 
     def select_tour(self, tour_id):
         # type: (int) -> None
         response = self.request_get('/select_tour.cgi' + '?tour_to_select=' + str(tour_id))
-        # assume everything is ok
+        now_tour = self.get_state()['tour_id']
+        assert str(now_tour) == str(tour_id), "Failed to change tour ID: have %s instead of %s" % (str(now_tour), str(tour_id))
 
     def get_admin_queue(self, limit = 25, tasks = None):
         # type: (int, Optional[List[int]]) -> Any
@@ -83,12 +112,11 @@ class NsutsClient:
     def submit_solution(self, task_id, compiler_name, source_text):
         # type: (int, str, Union[bytes,str]) -> None
         data = {
-            'lang': compiler_name,
-            'task': task_id,
-            'text': source_text
+            'langId': compiler_name,
+            'taskId': task_id,
+            'sourceText': source_text
         }
-        url = self.config['nsuts'] + '/submit.cgi?submit=1'
-        response = requests.post(url, cookies = self.get_cookies(), data = data, verify = self.do_verify())
+        response = self.request_post('/api/submit/do_submit', data, is_json = False)
 
     def get_my_last_submit_id(self):
         # type: () -> Optional[int]

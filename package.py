@@ -4,6 +4,7 @@ import argparse, sys
 import validate, compile
 
 def main(argv = None):
+    # type: (Optional[List[str]]) -> int
     # handle cmd arguments
     parser = argparse.ArgumentParser(description = "Packages tests into nsuts-ready zip.")
     parser.add_argument('-q', '--quiet', help = "print only results (no intermediate messages)", action = "store_true")
@@ -18,13 +19,14 @@ def main(argv = None):
     args.validator = not args.no_validator
     args.samples = not args.no_samples
     def arg(name):
+        # type: (str) -> List[str]
         if getattr(args, name):
             return ["--" + name]
         return []
 
     # preparation
     cfg = Config(quiet = args.quiet, stop = True)
-    packed_file_list = []
+    packed_file_list = []       # type: List[str]
     ret_code = 0
 
     # compile checker (always if present), validator (unless disabled)

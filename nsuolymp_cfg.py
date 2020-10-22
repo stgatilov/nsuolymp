@@ -8,7 +8,7 @@ default_compiler_flags = {
     "javac": "",
     "kotlinc": "",
     "cl": "/O2 /EHsc",
-    "g++": "-O2 -std=gnu++11",
+    "g++": "-O2 -std=gnu++14",
     "gcc": "-O2 -std=c11",
     "python": "-m py_compile",
 }

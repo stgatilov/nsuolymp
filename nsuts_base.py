@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import requests
-import json, time
+import json, time, base64
 from typing import Any, Dict, List, Tuple, Optional, NamedTuple, Union
 
 class NsutsClient:
@@ -19,7 +19,7 @@ class NsutsClient:
         # type: () -> Dict[str, str]
         return {
             'CGISESSID': self.config['session_id'],
-            'PHPSESSID': self.config['session_id']
+            'PHPSESSID': self.config['session_id'],
         }
 
     def request_get(self, path):
@@ -104,10 +104,16 @@ class NsutsClient:
         return submits
     
     def get_solution_source(self, solution_id):
-        # type: (int) -> str
-        code = self.request_get('/show.cgi?source=' + str(solution_id)).text # type: str
-        start_pos = code.find('<code>')
-        return code[start_pos + 6:-13]
+        # type: (int) -> bytes
+        url = '/api/submit/get_source?id=' + str(solution_id)
+        response = self.request_get(url).json()
+        if 'data' in response:  # zip archive for emailtester problems
+            return {
+                'type': 'emailtester',
+                'content': base64.b64decode(response['data']),
+            }
+        else:
+            return b''.join([base64.b64decode(line) for line in response['text']])
 
     def submit_solution(self, task_id, compiler_name, source_text):
         # type: (int, str, Union[bytes,str]) -> None

@@ -15,7 +15,7 @@ def main(argv = None):
     parser.add_argument('-e', '--stop-on-error', help = "stop script after first error encountered", action = "store_true")
     parser.add_argument('-q', '--quiet', help = "print only results (no intermediate messages)", action = "store_true")
     parser.add_argument('-a', '--all', help = "perform full generation and validation of complete problem (implies -c, -v, -e, -s)", action = "store_true")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if args.all:
         args.compile = args.validate = args.stop_on_error = True
         if args.solution is None:

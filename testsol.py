@@ -20,7 +20,7 @@ def main(argv = None):
     parser.add_argument('-i', '--tests', help = "comma-separated list of test names/globs/ranges to run on (by default all tests are used)", metavar = "TESTS")
     parser.add_argument('--nsuts', help = "test solutions on the remote nsuts testing server", action = "store_true")
     parser.add_argument('--local', help = "test solutions locally (default)", action = "store_true")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     test_all_solutions = ('*' in args.solutions or '@' in args.solutions)
     if args.gen_output:

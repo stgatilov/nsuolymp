@@ -12,7 +12,7 @@ def main(argv = None):
     parser.add_argument('--svn', help = "rename using 'svn rename'", action = "store_true")
     parser.add_argument('--hg', help = "rename using 'hg rename'", action = "store_true")
     parser.add_argument('-q', '--quiet', help = "print only results (no intermediate messages)", action = "store_true")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     # check if we are inside 'tests' directory: then we should go up
     # recall that the whole nsuolymp works in the root problem directory

@@ -11,7 +11,7 @@ def main(argv = None):
     parser.add_argument('-m', '--ml', help = "specify memory limit in megabytes (default: no limit)", type = float)
     parser.add_argument('-i', '--interactive', help = "run with interactor", action = "store_true")
     parser.add_argument('-q', '--quiet', help = "print only results (no intermediate messages)", action = "store_true")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     tl = None
     ml = None

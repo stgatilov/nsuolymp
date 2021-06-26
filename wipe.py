@@ -43,7 +43,7 @@ def main(argv = None):
     parser.add_argument('-o', '--output', help = "delete output files for all tests", action = "store_true")
     parser.add_argument('-a', '--all', help = "delete almost everything (implies -i, -c, -g)", action = "store_true")
     parser.add_argument('-q', '--quiet', help = "don't ask confirmation, don't print intermediate messages", action = "store_true")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if args.all:
         args.interm = args.compile = True

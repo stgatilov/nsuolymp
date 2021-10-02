@@ -36,15 +36,16 @@ nsuts_options = {
     # BEWARE: be sure to NOT commit you credentials !
     "email": "user@name.ru",
     "password": "securepassword",
-    "session_id": "5c4d2b5a372ca8770923449e286f24a5",
+#    "session_id": "5c4d2b5a372ca8770923449e286f24a5",
+#    "verify": False,
 
     "compilers": {
-        "cpp": ["vcc2015", "mingw8.1cpp"],
-        "c": ["vc2015", "mingw8.1c"],
+        "cpp": ["vcc2019", "mingw8.1cpp"],
+        "c": ["vcc2019", "mingw8.1cpp"],  # ["vc2019", "mingw8.1c"],
         "java": ["java8u101x32"],
         "kotlin": ["kotlinc"],
-        "python": ["python3.6"],
-        "pas": ["fpas2.6.4"],
+        "python": ["python3.7.6"],
+        "pas": ["fpas3.0.0"],
     },
 } # type: Dict[str, Any]
 

@@ -136,6 +136,7 @@ def main(argv = None):
                         assert(subid is not None)
                         ids.append(subid)
                         names.append("%s (%s)" % (sol, compiler))
+                        time.sleep(1.1)
                 test_results = test_results + cast(Any, nsuolymp_get_results(nsuts, ids, names, admin = True))
     except (StopError):
         pass

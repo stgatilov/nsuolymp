@@ -20,7 +20,7 @@ nsuts.auth()
 nsuts.select_olympiad(olympiad_id)
 nsuts.select_tour(tour_id)
 
-res = nsuts.get_admin_queue(limit = 9999)
+res = nsuts.get_admin_queue(limit = 99999)
 data = list(sorted(res['submissions'], key = lambda x: int(x['id'])))
 with open("queue.json", "w") as f:
-    json.dump(data, f, indent=2)
+    json.dump(data, f, indent = 2)

@@ -90,7 +90,7 @@ class NsutsClient:
 
     def select_tour(self, tour_id):
         # type: (int) -> None
-        response = self.request_get('/select_tour.cgi' + '?tour_to_select=' + str(tour_id))
+        response = self.request_get('/api/tours/enter?tour=' + str(tour_id))
         now_tour = self.get_state()['tour_id']
         assert str(now_tour) == str(tour_id), "Failed to change tour ID: have %s instead of %s" % (str(now_tour), str(tour_id))
 

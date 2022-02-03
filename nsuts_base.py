@@ -68,7 +68,8 @@ class NsutsClient:
         # type: () -> None
         data = {
             'email': self.config['email'],
-            'password': self.config['password']
+            'password': self.config['password'],
+            'method': 'internal',
         }
         response = self.request_post('/api/login', data)
         auth_result = response.json()

@@ -578,7 +578,8 @@ def compile_source_impl(source, language = None, compiler_flags = None, compiler
 if os.name == 'nt':
     import ctypes
     SEM_NOGPFAULTERRORBOX = 0x0002
-    ctypes.windll.kernel32.SetErrorMode(SEM_NOGPFAULTERRORBOX)
+    SEM_FAILCRITICALERRORS = 0x0001
+    ctypes.windll.kernel32.SetErrorMode(SEM_NOGPFAULTERRORBOX | SEM_FAILCRITICALERRORS)
 
 #RunResult = namedtuple('RunResult', 'verdict exit_code time memory')
 RunResult = NamedTuple('RunResult', [('verdict', str), ('exit_code', int), ('time', float), ('memory', float)])

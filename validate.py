@@ -13,6 +13,7 @@ def main(argv = None):
     parser.add_argument('-s', '--samples', help = "check that samples are taken from statements", action = "store_true")
     parser.add_argument('-i', '--indices', help = "check tests' names", action = "store_true")
     parser.add_argument('-o', '--output', help = "check that outputs for tests are present", action = "store_true")
+    parser.add_argument('-j', '--parallel', help = "spawn processes in parallel", action = "store_true")
     parser.add_argument('-a', '--all', help = "check everything (implies -v, -s, -i, -o)", action = "store_true")
     args = parser.parse_args(argv)
     if args.all:
@@ -41,7 +42,7 @@ def main(argv = None):
     try:
         # compile validator (if asked for)
         if args.compile:
-            compile_results = compile_sources(get_sources_in_problem(validator = args.validator, checker = args.samples), cfg)
+            compile_results = compile_sources(get_sources_in_problem(validator = args.validator, checker = args.samples), cfg, args.parallel)
             if len(compile_results[1]) > 0:
                 on_error(1)
         # run all types of validation

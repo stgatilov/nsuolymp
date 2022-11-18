@@ -5,6 +5,7 @@ import glob, fnmatch, os, shutil, re, itertools, operator, string, random, subpr
 import sarge                            # simple wrapper over subprocess
 import psutil                           # for measuring CPU time and memory
 import colorama                         # for colored console output (cross-platform)
+from multiprocessing.pool import ThreadPool
 from os import path
 from collections import namedtuple
 from typing import Any, Optional, Callable, Union, Iterable, Pattern, List, Tuple, Dict, NamedTuple, IO, Iterator
@@ -698,13 +699,13 @@ def control_processes_execution(processes, time_limits, memory_limits, deadpipe_
 # if "solution" is a list, then it is run directly via Popen
 # parameters and results as in controlled_run
 # if interactive = True, then solution is run connected to interactor
-def controlled_run_solution(solution, time_limit, memory_limit, interactive, quiet = False):
-    # type: (Union[str, List[str]], Optional[float], Optional[float], bool, bool) -> RunResult
+def controlled_run_solution(solution, time_limit, memory_limit, interactive, quiet = False, change_workdir = None):
+    # type: (Union[str, List[str]], Optional[float], Optional[float], bool, bool, None|str) -> RunResult
     corrected_memory_limit = memory_limit
     if not isinstance(solution, str):
         popen_args = solution       # type: Union[str, List[str]]
     elif if_exe_exists(solution):
-        solution_path = solution if os.name == 'nt' else path.join('./', solution)
+        solution_path = solution if os.name == 'nt' else path.join(os.getcwd(), solution)
         popen_args = solution_path
     elif is_java_class(solution) or has_java_task(solution) or is_java_jar(solution):
         heap_size_key = '-Xmx1G' if memory_limit is None else '-Xmx%dM' % int(memory_limit)
@@ -722,11 +723,19 @@ def controlled_run_solution(solution, time_limit, memory_limit, interactive, qui
     else:
         raise Exception("don't know how to run %s" % solution)
 
+    working_dir = os.getcwd()
+    if change_workdir is not None:
+        working_dir = change_workdir
+
+    input_txt = os.path.join(working_dir, 'input.txt')
+    output_txt = os.path.join(working_dir, 'output.txt')
+    answer_txt = os.path.join(working_dir, 'answer.txt')
+
     if interactive:
         interactor_name = 'interactor'
-        interactor_args = [interactor_name if os.name == 'nt' else path.join('./', interactor_name), 'input.txt', 'output.txt']
-        if path.isfile('answer.txt'):
-            interactor_args.append('answer.txt')
+        interactor_args = [interactor_name if os.name == 'nt' else path.join('./', interactor_name), input_txt, output_txt]
+        if path.isfile(answer_txt):
+            interactor_args.append(answer_txt)
         args_list = [interactor_args, popen_args]
         TLs = [time_limit * 2 + 5, time_limit] if time_limit is not None else [None, None]                  # type: List[Optional[float]]
         MLs = [memory_limit + 256, corrected_memory_limit] if memory_limit is not None else [None, None]    # type: List[Optional[float]]
@@ -752,15 +761,30 @@ def controlled_run_solution(solution, time_limit, memory_limit, interactive, qui
         return sol_res._replace(verdict = exitcode_verdict)
     else:
         proclaim_process_runs([popen_args], [time_limit], [corrected_memory_limit], quiet)
-        cmin = open("input.txt", "rb") if enable_stdin_redirection else null_context(None)       # type: Any
+        cmin = open(input_txt, "rb") if enable_stdin_redirection else null_context(None)       # type: Any
         with cmin as fin:
-            cmout = open("_stdout_", "wb") if enable_stdout_redirection else null_context(None)   # type: Any
+            cmout = open(os.path.join(working_dir, "_stdout_"), "wb") if enable_stdout_redirection else null_context(None)   # type: Any
             with cmout as fout:
-                cmerr = open("_stderr_", "wb") if enable_stderr_redirection else null_context(None) # type: Any
+                cmerr = open(os.path.join(working_dir, "_stderr_"), "wb") if enable_stderr_redirection else null_context(None) # type: Any
                 with cmerr as ferr:
-                    process = psutil.Popen(popen_args, stdin = fin, stdout = fout, stderr = ferr)
+                    process = psutil.Popen(popen_args, stdin = fin, stdout = fout, stderr = ferr, cwd = working_dir)
                     res = control_processes_execution([process], [time_limit], [corrected_memory_limit], None, quiet)
         return res[0]
+
+def execute_tasks(tasks, run_in_parallel, stop_on_fail):
+    # type: (List[Callable[[], bool]], bool, bool) -> None
+    if not run_in_parallel:
+        for task in tasks:
+            result = task()
+            if not result and stop_on_fail:
+                return
+        return
+
+    with ThreadPool() as pool:
+        for task in tasks:
+            pool.apply_async(task)
+        pool.close()
+        pool.join()
 
 ############################## Diffs and checkers ##############################
 
@@ -801,12 +825,17 @@ def get_verdict_for_checker_code(errcode):
 #   'input.txt' - input data
 #   'answer.txt' - jury's output data
 #   'output.txt' - contestant's output data
-def run_checker(quiet = False):
-    # type: (bool) -> str
+def run_checker(workdir, quiet = False):
+    # type: (str, bool) -> str
+
+    input_txt = os.path.join(workdir, 'input.txt')
+    output_txt = os.path.join(workdir, 'output.txt')
+    answer_txt = os.path.join(workdir, 'answer.txt')
+
     if if_exe_exists('check'):
-        errcode = cmd_runner(quiet)('./check input.txt output.txt answer.txt').returncode
+        errcode = cmd_runner(quiet)('./check "' + input_txt + '" "' + output_txt + '" "' + answer_txt + '"').returncode
     else:
-        errcode = 0 if is_file_diff_empty('output.txt', 'answer.txt') else 1
+        errcode = 0 if is_file_diff_empty(output_txt, answer_txt) else 1
     return get_verdict_for_checker_code(errcode)
 
 ################################### Archives ###################################
@@ -884,42 +913,57 @@ class Config:
 #   test's output file is ignored
 #   it is overwritten with the output of solution (unless it was terminated prematurely)
 # if interactor is present, solution is run with it
-def check_solution_on_test(cfg, solution, input_file, gen_output = False):
-    # type: (Config, str, str, bool) -> RunResult
+def check_solution_on_test(cfg, solution, input_file, gen_output = False, randomize_workdir = False):
+    # type: (Config, str, str, bool, bool) -> RunResult
     assert(path.dirname(path.abspath(solution)) == path.abspath(os.getcwd()))
-    copyfile(input_file, 'input.txt')
-    removefile('output.txt')
-    removefile('answer.txt')
+
+    workdir = os.getcwd()
+    if randomize_workdir:
+        random_suffix = ''.join(random.choices(string.ascii_lowercase, k=16))
+        workdir = os.path.join(workdir, 'tmp-work-dir_' + solution + '_' + random_suffix)
+        os.mkdir(workdir)
+    input_txt = os.path.join(workdir, 'input.txt')
+    output_txt = os.path.join(workdir, 'output.txt')
+    answer_txt = os.path.join(workdir, 'answer.txt')
+    std_out = os.path.join(workdir, '_stdout_')
+
+    copyfile(input_file, input_txt)
+    removefile(output_txt)
+    removefile(answer_txt)
     interactive = if_exe_exists('interactor')
     if path.isfile(get_output_by_input(input_file)):
-        copyfile(get_output_by_input(input_file), 'answer.txt')
+        copyfile(get_output_by_input(input_file), answer_txt)
 
     (in_fn, out_fn) = read_filenames()
-    copyfile('input.txt', in_fn)
-    res = controlled_run_solution(solution, cfg.tl, cfg.ml, interactive, cfg.quiet)
-    if path.isfile(out_fn):
-        copyfile(out_fn, 'output.txt')
+    copyfile(input_txt, os.path.join(workdir, in_fn))
+    res = controlled_run_solution(solution, cfg.tl, cfg.ml, interactive, cfg.quiet, change_workdir=workdir)
+    if path.isfile(os.path.join(workdir, out_fn)):
+        copyfile(os.path.join(workdir, out_fn), 'output.txt')
 
     if enable_stdout_redirection:
-        if getfilesize('_stdout_') == 0:
-            os.remove('_stdout_')
-        if getfilesize('output.txt') <= 0 and getfilesize('_stdout_') > 0:
-            copyfile('_stdout_', 'output.txt')
+        if getfilesize(std_out) == 0:
+            os.remove(std_out)
+        if getfilesize(output_txt) <= 0 and getfilesize(std_out) > 0:
+            copyfile(std_out, output_txt)
     if gen_output:
-        copyfile('output.txt', 'answer.txt')
+        copyfile(output_txt, answer_txt)
 
     if not interactive:
         if not gen_output:
             if path.isfile(get_output_by_input(input_file)):
-                copyfile(get_output_by_input(input_file), 'answer.txt')
+                copyfile(get_output_by_input(input_file), answer_txt)
             elif res.verdict == 'A':
                 res = res._replace(verdict = 'O')
         if res.verdict == 'A':
-            checker_res = run_checker(cfg.quiet)
+            checker_res = run_checker(workdir, cfg.quiet)
             res = res._replace(verdict = checker_res)
     printq(cfg.quiet, "on %s: %s" % (input_file, colored_verdict(res.verdict)))
     if gen_output and res.verdict in ['A', 'W', 'P', 'J']:
-        copyfile('answer.txt', get_output_by_input(input_file))
+        copyfile(answer_txt, get_output_by_input(input_file))
+
+    if randomize_workdir:
+        shutil.rmtree(workdir, ignore_errors=True)
+
     return res
 
 # run given solution on all tests (or on specified subset)
@@ -928,18 +972,29 @@ def check_solution_on_test(cfg, solution, input_file, gen_output = False):
 # returns list of RunResult tuples, one per test (see description above)
 # if cfg.stop=True, then shorter string is returned (up to first error inclusive)
 # see check_solution_on_test for explanation of gen_output = True case
-def check_solution(cfg, solution, tests_filter = None, gen_output = False):
-    # type: (Config, str, Optional[str], bool) -> List[RunResult]
+def check_solution(cfg, solution, tests_filter = None, gen_output = False, run_in_parallel = False):
+    # type: (Config, str, Optional[str], bool, bool) -> List[RunResult]
     res_list = []
-    for f in get_tests_inputs():
-        if not if_test_passes_filter(f, tests_filter):
-            res_list.append(RunResult('.', 0, 0, 0))
-            continue
-        res = check_solution_on_test(cfg, solution, f, gen_output)
-        res_list.append(res)
-        if res.verdict != 'A' and cfg.stop:
+    tasks = []
+
+    def task(f, index):
+        print('Run on test number ' + str(index))
+        res = check_solution_on_test(cfg, solution, f, gen_output, run_in_parallel)
+        res_list[index] = res
+        if res.verdict != 'A' and cfg.stop and not run_in_parallel:
             printq(cfg.quiet, "Stopped with %s on %s: %s" % (solution, f, colored_verdict(res.verdict)))
-            break
+            return False
+        return True
+
+    for test_index, f in enumerate(get_tests_inputs()):
+        res_list.append(RunResult('.', 0, 0, 0))
+        if not if_test_passes_filter(f, tests_filter):
+            continue
+
+        tasks.append((lambda f, i: lambda : task(f, i))(f, test_index))
+
+    execute_tasks(tasks, run_in_parallel, cfg.stop)
+
     return res_list
 
 # returns formatted version of solution results
@@ -974,14 +1029,14 @@ def format_solution_result(solution_name, run_results):
 # returns list of pairs:
 #   first - name of solution
 #   second - list of RunResult tuples
-def check_many_solutions(cfg, solutions = None, tests = None):
-    # type: (Config, Optional[List[str]], Optional[str]) -> List[Tuple[str, List[RunResult]]]
+def check_many_solutions(cfg, solutions = None, tests = None, run_in_parallel = False):
+    # type: (Config, Optional[List[str]], Optional[str], bool) -> List[Tuple[str, List[RunResult]]]
     if solutions is None:
         solutions = get_solutions()
         printq(cfg.quiet, "Solutions: %s" % str(solutions))
     res_table = []
     for sol in solutions:
-        res = check_solution(cfg, sol, tests)
+        res = check_solution(cfg, sol, tests, False, run_in_parallel)
         res_table.append((sol, res))
         if not cfg.quiet:
             row = format_solution_result(sol, res)
@@ -1118,7 +1173,7 @@ def check_samples(statements_name = None, quiet = False):
         copyfile(path_out, 'answer.txt')
         with open('output.txt', 'wb') as f:
             f.write(sample[1])
-        if run_checker(quiet) != 'A':
+        if run_checker(os.getcwd(), quiet) != 'A':
             printq(quiet, colored_verdict('W', "Sample test %s has wrong output in statement" % path_in))
             return True
         printq(quiet, "Sample test %s is ok" % path_in)
@@ -1216,20 +1271,27 @@ def compile_source(source, cfg):
     return compile_source_impl(source, None, cfg.cl_flags, cfg.cl_order, cfg.quiet)
 
 # compiles given list of source files
-# returns two lists in a tuple: list of successfully compiled sources, and list of unsucessfully compiled ones
+# returns two lists in a tuple: list of successfully compiled sources, and list of unsuccessfully compiled ones
 # if cfg.stop=True, then lists may be incomplete (they include all sources up to first error inclusive)
-def compile_sources(sources, cfg):
-    # type: (List[str], Config) -> Tuple[List[str], List[str]]
+def compile_sources(sources, cfg, run_in_parallel = False):
+    # type: (List[str], Config, bool) -> Tuple[List[str], List[str]]
     successes = []
     fails = []
-    for source in sources:
-        ok = compile_source(source, cfg)
+
+    def task(filename):
+        ok = compile_source(filename, cfg)
         if ok:
-            successes.append(source)
+            successes.append(filename)
         else:
-            fails.append(source)
-            if cfg.stop:
-                break
+            fails.append(filename)
+        return ok
+
+    compilation_tasks = []
+    for source in sources:
+        compilation_tasks.append((lambda s: lambda : task(s))(source))
+
+    execute_tasks(compilation_tasks, run_in_parallel, cfg.stop)
+
     return (successes, fails)
 
 # returns which source files in the specified groups are present in the current problem

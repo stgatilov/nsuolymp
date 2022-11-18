@@ -18,6 +18,7 @@ def main(argv = None):
     parser.add_argument('-t', '--tl', help = "specify time limit in seconds (by default taken from problem statement, 0 means 'no limit')", type = float)
     parser.add_argument('-m', '--ml', help = "specify memory limit in megabytes (by default taken from problem statement, 0 means 'no limit')", type = float)
     parser.add_argument('-i', '--tests', help = "comma-separated list of test names/globs/ranges to run on (by default all tests are used)", metavar = "TESTS")
+    parser.add_argument('-j', '--parallel', help = "spawn processes in parallel", action = "store_true")
     parser.add_argument('--nsuts', help = "test solutions on the remote nsuts testing server", action = "store_true")
     parser.add_argument('--local', help = "test solutions locally (default)", action = "store_true")
     args = parser.parse_args(argv)
@@ -75,7 +76,7 @@ def main(argv = None):
                 sol_prelist.append(exe)
 
         # compile all the necessary sources
-        compile_results = compile_sources(compile_list, cfg)
+        compile_results = compile_sources(compile_list, cfg, args.parallel)
         if len(compile_results[1]) > 0:
             on_error(10)
 
@@ -99,11 +100,11 @@ def main(argv = None):
                 on_error(12, True)
         elif args.gen_output:
             solution = solutions_list[0]
-            test_results = [(solution, check_solution(cfg, solution, args.tests, True))]
+            test_results = [(solution, check_solution(cfg, solution, args.tests, args.parallel))]
         else:
             test_results = []
             if args.local:
-                test_results = test_results + check_many_solutions(cfg, solutions_list, args.tests)
+                test_results = test_results + check_many_solutions(cfg, solutions_list, args.tests, args.parallel)
             if args.nsuts:
                 if path.isfile('nsuts.json'):
                     with open('nsuts.json') as f:

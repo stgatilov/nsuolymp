@@ -21,7 +21,7 @@ default_compiler_order = {
     "pas": ["dcc32", "fpc"],
     "java": ["javac"],
     "kotlin": ["kotlinc"],
-    "python": ["python"],
+    "python": ["python3"],
 }
 
 # NSUTs credentials and contest options

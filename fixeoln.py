@@ -24,7 +24,7 @@ def main(argv = None):
         with open(fname, 'wb') as f:
             f.write(convert_eoln(data, style))
 
-    return 0;
+    return 0
 
 if __name__ == "__main__":
     sys.exit(main())

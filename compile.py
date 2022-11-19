@@ -13,6 +13,7 @@ def main(argv = None):
     parser.add_argument('-c', '--checker', help = "compile checker & interactor", action = "store_true")
     parser.add_argument('-s', '--solutions', help = "compile all solutions", action = "store_true")
     parser.add_argument('-g', '--generators', help = "compile all generators", action = "store_true")
+    parser.add_argument('-j', '--parallel', help = "spawn processes in parallel", action = "store_true")
     parser.add_argument('-a', '--all', help = "compile all problem stuff (shortcut for -v -c -s -g)", action = "store_true")
     args = parser.parse_args(argv)
     if args.all:
@@ -31,7 +32,7 @@ def main(argv = None):
         compile_list.extend(args.sources)
         compile_list.extend(get_sources_in_problem(validator = args.validator, checker = args.checker, solutions = args.solutions, generators = args.generators))
 
-    compile_results = compile_sources(compile_list, cfg)
+    compile_results = compile_sources(compile_list, cfg, args.parallel)
     print_compile_results(compile_results)
 
     ret_code = 0

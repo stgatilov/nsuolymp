@@ -7,8 +7,8 @@ default_compiler_flags = {
     "fpc": "-O2",
     "javac": "",
     "kotlinc": "",
-    "cl": "/O2 /EHsc",
-    "g++": "-O2 -std=gnu++14",
+    "cl": "/O2 /EHsc /std:c++17",
+    "g++": "-O2 -std=c++17",
     "gcc": "-O2 -std=c11",
     "python": "-m py_compile",
 }
@@ -45,7 +45,7 @@ nsuts_options = {
         "java": ["java8u101x32"],
         "kotlin": ["kotlinc"],
         "python": ["python3.7.6"],
-        "pas": ["fpas3.0.0"],
+        "pas": ["fpas3.0.4"],
     },
 } # type: Dict[str, Any]
 

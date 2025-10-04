@@ -11,6 +11,7 @@ def main(argv = None):
     parser.add_argument('shift', help = "the number of each test will be increased by this shift (may be negative)")
     parser.add_argument('--svn', help = "rename using 'svn rename'", action = "store_true")
     parser.add_argument('--hg', help = "rename using 'hg rename'", action = "store_true")
+    parser.add_argument('--git', help = "rename using 'git mv'", action = "store_true")
     parser.add_argument('-q', '--quiet', help = "print only results (no intermediate messages)", action = "store_true")
     args = parser.parse_args(argv)
 
@@ -49,29 +50,35 @@ def main(argv = None):
             print(colored_verdict('W', "Cannot rename test %s to %s: overwrites existing test" % (old, new)))
             return 1
 
-    def rename(fr, to):
+    command = None
+    if args.svn:
+        command = 'svn rename'
+    elif args.hg:
+        command = 'hg rename'
+    elif args.git:
+        command = 'git mv'
+
+    def rename_file(fr, to):
+        # type: (str, str) -> None
+        if command is not None:
+            os.system('%s %s %s' % (command, fr, to))
+        else:
+            os.rename(fr, to)
+
+    def rename_test(fr, to):
         # type: (str, str) -> None
         fr_o = get_output_by_input(fr)
         to_o = get_output_by_input(to)
-        if args.svn or args.hg:
-            vcs = 'svn' if args.svn else 'hg'
-            os.system('%s rename %s %s' % (vcs, fr, to))
-            if path.isfile(fr_o):
-                os.system('%s rename %s %s' % (vcs, fr_o, to_o))
-        else:
-            os.rename(fr, to)
-            if path.isfile(fr_o):
-                os.rename(fr_o, to_o)
+        rename_file(fr, to)
+        if path.isfile(fr_o):
+            rename_file(fr_o, to_o)
 
     from_all = list(renamed.keys())
     to_all = list(renamed.values())
     old_list = ",".join([str(get_test_index(f)).rjust(2) for f in from_all])
     new_list = ",".join([str(get_test_index(f)).rjust(2) for f in to_all])
     if not args.quiet:
-        mode = ""
-        if args.svn:
-            mode = " (with svn rename)"
-        print("To be renamed%s:" % mode)
+        print("To be renamed with '%s':" % ('os.rename' if command is None else command))
         print("  old: " + old_list)
         print("  new: " + new_list)
         print(color_highlight("Do you really want to rename these tests? [Yes/No] "), end="")
@@ -83,7 +90,7 @@ def main(argv = None):
     while len(renamed) > 0:
         for old,new in renamed.items():
             if not path.isfile(new):
-                rename(old, new)
+                rename_test(old, new)
                 if path.isfile(old):
                     print(colored_verdict('R', "Failed to rename %s to %s" % (old,new)))
                     return 2

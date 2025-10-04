@@ -13,7 +13,7 @@ class NsutsClient:
 
     def do_verify(self):
         # type: () -> bool
-        return self.config.get('verify', True)
+        return bool(self.config.get('verify', True))
 
     def get_cookies(self):
         # type: () -> Dict[str, str]
@@ -105,7 +105,7 @@ class NsutsClient:
         return submits
     
     def get_solution_source(self, solution_id):
-        # type: (int) -> bytes
+        # type: (int) -> Any
         url = '/api/submit/get_source?id=' + str(solution_id)
         response = self.request_get(url).json()
         if 'data' in response:  # zip archive for emailtester problems

@@ -2,6 +2,7 @@
 from __future__ import print_function
 from nsuolymp import *
 import argparse, sys, os
+from os import path
 
 def main(argv = None):
     # type: (Optional[List[str]]) -> int

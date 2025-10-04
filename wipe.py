@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from nsuolymp import *
-import argparse, sys, os, shutil
+import argparse, sys, os, shutil, glob
 from os import path
 
 def deduplicate(arr):

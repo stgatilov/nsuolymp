@@ -4,6 +4,7 @@ from nsuolymp_cfg import *
 from nsuolymp import *
 from nsuts_base import NsutsClient
 import argparse, sys
+from os import path
 from time import sleep
 
 

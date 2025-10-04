@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from nsuolymp import *
-import argparse, sys
+import argparse, sys, os
+from os import path
 import validate, compile
 
 def main(argv = None):

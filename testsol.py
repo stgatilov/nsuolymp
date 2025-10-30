@@ -125,6 +125,8 @@ def main(argv = None):
                     if lang is None:
                         continue
                     text = read_file_contents(sol)
+                    if lang in ['c', 'cpp']:
+                        text = embed_includes_into_cpp_source(cfg, sol)
                     if lang == 'java dir':
                         text = read_file_contents(path.join(sol, 'Task.java'))
                         lang = 'java'

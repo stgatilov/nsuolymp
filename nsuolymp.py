@@ -1410,3 +1410,39 @@ def add_source_to_compile_list(cfg, filename, compile_list, force = False):
         compile_list.extend(related_sources)
         return filename
     return filename_noext
+
+# given a path to cpp source file, returns its text with all local includes embedded
+# embedding happens only if doublequotes are used and the file can be found
+# note: #pragma once is applied automatically and removed from text
+def embed_includes_into_cpp_source(cfg, filename):
+    # type: (Config, str) -> bytes
+    included_files = set()
+    def get_source_recursive(this_filename):
+        # type: (str) -> Optional[bytes]
+        if this_filename in included_files:
+            return b'/* include duplicate: %s */\n' % this_filename.encode()
+        included_files.add(this_filename)
+        text = read_file_contents(this_filename)
+        if text is None:
+            return None
+        text = re.sub(rb'#pragma\s+once', rb'/* pragma once */', text)
+        new_text = b''
+        last_pos = 0
+        for m in re.finditer(rb'#include\s+\"([\w.]+)\"', text):
+            incl_filename = m.group(1).decode()
+            incl_filename = path.join(path.dirname(this_filename), incl_filename)
+            incl_filename = path.normpath(incl_filename)
+            incl_text = get_source_recursive(incl_filename)
+            new_text += text[last_pos : m.start(0)]
+            if incl_text is None:
+                new_text += m.group(0)
+            else:
+                new_text += b'/* ############### start include: %s ############### */\n' % incl_filename.encode()
+                new_text += incl_text
+                new_text += b'/* ################ end include: %s ################ */\n' % incl_filename.encode()
+            last_pos = m.end(0)
+        new_text += text[last_pos :]
+        return new_text
+    full_text = get_source_recursive(path.normpath(filename))
+    assert full_text is not None, 'Source file "%s" not found' % filename
+    return full_text

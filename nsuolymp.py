@@ -903,7 +903,7 @@ def check_solution_on_test(cfg, solution, input_file, gen_output = False):
     if enable_stdout_redirection:
         if getfilesize('output.txt') < 0:
             copyfile('_stdout_', 'output.txt')
-        os.remove('_stdout_')
+        removefile('_stdout_')
     if gen_output:
         copyfile('output.txt', 'answer.txt')
 

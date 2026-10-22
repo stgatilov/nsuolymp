@@ -9,7 +9,7 @@ def main(argv = None):
     parser.add_argument('-l', '--linux', help = "convert to linux style (lf)", action = "store_true")
     # handle cmd arguments
     args = parser.parse_args(argv)
-    style = ""
+    style = contest_eoln_style
     if args.linux:
         style = "linux"
     if args.windows:
